@@ -1,0 +1,5 @@
+#!/usr/bin/env fish
+begin
+    set -lx XDG_DATA_HOME /home/noah/gits/codex
+    vim -u init.lua --noplugin $argv[1]
+end
