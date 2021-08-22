@@ -24,3 +24,31 @@ end)
 
 vim.cmd [[colorscheme dracula]]
 
+local opt = vim.opt
+local g = vim.g
+
+local function map(mode, lhs, rhs, opts)
+  local options = {noremap = true}
+  if opts then options = vim.tbl_extend('force', options, opts) end
+  vim.api.nvim_set_keymap(mode, lhs, rhs, options)
+end
+
+g.mapleader = ' '
+
+map('n', '<leader>e', ":bdelete!", opt)
+map('n', '<left>', '0', opt)
+map('n', '<right>', '$', opt)
+map('n', '<up>', 'kkkkkkk', opt)
+map('n', '<down>', 'jjjjjjj', opt)
+map('n', '<leader>nh', '<esc>:', opt)
+map('n', '<leader>nn', '<esc>/', opt)
+map('n', '<leader>w', ':w!<cr>', opt)
+map('n', '<leader><leader>w', ':wq!<cr>', opt)
+map('n', '<leader>q', ':wq!<cr>', opt)
+-- map('n', '<leader><leader>e', ':q!<cr>', opt)
+
+map('n', '<leader>j', ':BufferLineCyclePrev<CR>', opt)
+map('n', '<leader>k', ':BufferLineCycleNext<CR>', opt)
+map('n', '<leader>h', '<C-w>h<CR>0', opt)
+-- map('n', '<leader>hh', '<C-w>h<CR>0', opt)
+map('n', '<leader>l', '<C-w>l<CR>0', opt)
