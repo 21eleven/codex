@@ -1,4 +1,4 @@
-vim.opt.runtimepath= "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after"
+vim.opt.runtimepath= "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after,~/gits/codex"
 
 example_func = function(a, b)
 	print("A is: ", a)
@@ -26,7 +26,6 @@ require('packer').startup(function()
 	use {'dracula/vim', as = 'dracula'}
         use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
 end)
-
 vim.cmd [[colorscheme dracula]]
 
 local opt = vim.opt
@@ -39,7 +38,7 @@ local function map(mode, lhs, rhs, opts)
 end
 
 g.mapleader = ' '
-
+map('i', 'jk', '<esc>', opt)
 map('n', '<leader>e', ":bdelete!", opt)
 map('n', '<left>', '0', opt)
 map('n', '<right>', '$', opt)
@@ -49,7 +48,7 @@ map('n', '<leader>nh', '<esc>:', opt)
 map('n', '<leader>nn', '<esc>/', opt)
 map('n', '<leader>w', ':w!<cr>', opt)
 map('n', '<leader><leader>w', ':wq!<cr>', opt)
-map('n', '<leader>q', ':q<cr>', opt)
+map('n', '<leader>q', ':qa!<cr>', opt)
 -- map('n', '<leader><leader>e', ':q!<cr>', opt)
 
 map('n', '<leader>j', ':BufferLineCyclePrev<CR>', opt)
