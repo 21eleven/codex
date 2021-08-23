@@ -1,5 +1,5 @@
-#!/usr/bin/env fish
-begin
-    set -lx XDG_DATA_HOME /home/noah/gits/codex
-    vim -u init.lua --noplugin $argv[1]
-end
+#!/bin/sh
+
+CODEX_RUNTIME_DIR=${CODEX_RUNTIME_DIR:-"$HOME/.local/share/codex"}
+
+XDG_DATA_HOME="$HOME/.local/share/codex" nvim -u "$HOME"/gits/codex/init.lua "$@"
