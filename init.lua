@@ -25,8 +25,11 @@ require('packer').startup(function()
 	use 'wbthomason/packer.nvim'
 	use {'dracula/vim', as = 'dracula'}
         use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
+        --use { '~/gits/codex'}
 end)
 vim.cmd [[colorscheme dracula]]
+
+codex = require("lua/codex")
 
 local opt = vim.opt
 local g = vim.g
