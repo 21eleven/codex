@@ -15,3 +15,4 @@ futures = "0.3"
 log = "0.4"
 log-panics = { version = "2.0", features = ["with-backtrace"] }
 log4rs = { version = "1.0", features = ["toml_format"]}
+chrono = "0.4"

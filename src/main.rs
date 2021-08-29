@@ -6,19 +6,21 @@ use std::default::Default;
 use std::error::Error;
 use tokio::io::Stdout;
 use tokio::time;
+use chrono::Local;
 
 #[derive(Clone)]
 struct NeovimHandler {}
 
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
-    nvim.command("e 20210828.md").await.unwrap();
+    let yyyymmdd = Local::now().format("%Y%m%d");
+    nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
     tokio::spawn(async move {
-        let mut interval = time::interval(time::Duration::from_millis(450));
-        let welcome = "C O D E X".to_string();
+        let mut interval = time::interval(time::Duration::from_millis(250));
+        let welcome = "C O D E X 📖".to_string();
         for idx in 1..welcome.len() {
             let s = format!(
                 "lua print(\"{}\")",
-                &welcome[..idx+1]);
+                welcome.chars().take(idx).collect::<String>());
             interval.tick().await;
             nvim.command(&s).await.unwrap();
         }
