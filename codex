@@ -1,5 +1,3 @@
 #!/bin/sh
 
-CODEX_RUNTIME_DIR=${CODEX_RUNTIME_DIR:-"$HOME/.local/share/codex"}
-
 XDG_DATA_HOME="$HOME/.local/share/codex" nvim -u "$HOME"/gits/codex/init.lua "$@"
