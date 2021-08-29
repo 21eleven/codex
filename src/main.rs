@@ -10,6 +10,21 @@ use tokio::time;
 #[derive(Clone)]
 struct NeovimHandler {}
 
+async fn on_start(nvim: Neovim<Compat<Stdout>>) {
+    nvim.command("e 20210828.md").await.unwrap();
+    tokio::spawn(async move {
+        let mut interval = time::interval(time::Duration::from_millis(450));
+        let welcome = "C O D E X".to_string();
+        for idx in 1..welcome.len() {
+            let s = format!(
+                "lua print(\"{}\")",
+                &welcome[..idx+1]);
+            interval.tick().await;
+            nvim.command(&s).await.unwrap();
+        }
+    });
+}
+
 #[async_trait]
 impl Handler for NeovimHandler {
     type Writer = Compat<Stdout>;
@@ -18,10 +33,7 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
-                neovim
-                    .command("lua print(\"C O D E X\")")
-                    .await
-                    .unwrap();
+                on_start(neovim).await;
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
@@ -70,10 +82,8 @@ async fn main() {
     let config_file = format!("{}/codex-log.toml", plugin_dir);
 
     log_panics::init();
-    if let Err(e) = log4rs::init_file(
-        format!("{}/codex-log.toml", plugin_dir),
-        Default::default(),
-    ) {
+    if let Err(e) = log4rs::init_file(format!("{}/codex-log.toml", plugin_dir), Default::default())
+    {
         eprintln!("Error configuring logging with {}: {:?}", config_file, e);
         return;
     }
