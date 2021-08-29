@@ -1,18 +1,27 @@
 use async_trait::async_trait;
+use chrono::Local;
+use git2::Repository;
 use log::*;
 use nvim_rs::{compat::tokio::Compat, create::tokio as create, Handler, Neovim};
 use rmpv::Value;
 use std::default::Default;
+use std::env;
 use std::error::Error;
+use std::sync::Arc;
 use tokio::io::Stdout;
-use tokio::time;
-use chrono::Local;
+use tokio::sync::Mutex;
+use tokio::time; // use std::sync::Mutex instead???
 
 #[derive(Clone)]
-struct NeovimHandler {}
+struct NeovimHandler {
+    repo: Arc<Mutex<Option<Repository>>>,
+}
 
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     let yyyymmdd = Local::now().format("%Y%m%d");
+    // for (k, v) in env::vars() {
+    //     log::debug!("::env {}: {}", k, v);
+    // }
     nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_millis(250));
@@ -20,7 +29,8 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
         for idx in 1..welcome.len() {
             let s = format!(
                 "lua print(\"{}\")",
-                welcome.chars().take(idx).collect::<String>());
+                welcome.chars().take(idx).collect::<String>()
+            );
             interval.tick().await;
             nvim.command(&s).await.unwrap();
         }
@@ -35,7 +45,25 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
+                if !match *self.repo.lock().await {
+                    None => {
+                        log::debug!("No git repo");
+                        false
+                    }
+                    _ => true,
+                } {
+                    *self.repo.lock().await = Some(Repository::open(".").unwrap());
+
+                }
                 on_start(neovim).await;
+                match &*self.repo.lock().await {
+                    Some(repo) => {
+                        log::debug!("{:?}", repo.state());
+                        log::debug!("{:?}", repo.head().unwrap().name());
+                    }
+                    None => {}
+                }
+
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
@@ -89,7 +117,8 @@ async fn main() {
         eprintln!("Error configuring logging with {}: {:?}", config_file, e);
         return;
     }
-    let handler = NeovimHandler {};
+    let repo = Arc::new(Mutex::new(None));
+    let handler = NeovimHandler { repo };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
         Err(join_error) => {
