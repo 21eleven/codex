@@ -11,8 +11,8 @@ local fn = vim.fn
 -- local install_path = home_dir..'/.local/share/codex/nvim/site/pack/packer/start/packer.nvim'
 local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
 
-print(vim.inspect(vim.opt.rtp:get()))
-print(vim.inspect(fn.stdpath('data')))
+-- print(vim.inspect(vim.opt.rtp:get()))
+-- print(vim.inspect(fn.stdpath('data')))
 if fn.empty(fn.glob(install_path)) > 0 then
 	fn.system({'git', 'clone', 'https://github.com/wbthomason/packer.nvim', install_path})
 	execute 'packadd packer.nvim'
@@ -25,11 +25,10 @@ require('packer').startup(function()
 	use 'wbthomason/packer.nvim'
 	use {'dracula/vim', as = 'dracula'}
         use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
-        --use { '~/gits/codex'}
 end)
 vim.cmd [[colorscheme dracula]]
 
-codex = require("lua/codex")
+Codex = require("lua/codex")
 
 local opt = vim.opt
 local g = vim.g
@@ -59,3 +58,5 @@ map('n', '<leader>k', ':BufferLineCycleNext<CR>', opt)
 map('n', '<leader>h', '<C-w>h<CR>0', opt)
 -- map('n', '<leader>hh', '<C-w>h<CR>0', opt)
 map('n', '<leader>l', '<C-w>l<CR>0', opt)
+
+vim.cmd [[autocmd VimEnter * lua Codex.start()]]
