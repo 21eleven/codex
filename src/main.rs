@@ -9,12 +9,13 @@ use std::env;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::io::Stdout;
-use tokio::sync::Mutex;
-use tokio::time; // use std::sync::Mutex instead???
+use tokio::sync::Mutex; // use std::sync::Mutex instead???
+use tokio::time;
 
 #[derive(Clone)]
 struct NeovimHandler {
-    repo: Arc<Mutex<Option<Repository>>>,
+    // repo: Arc<Mutex<Option<Repository>>>,
+    repo: Arc<Mutex<Repository>>,
 }
 
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
@@ -45,25 +46,24 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
-                if !match *self.repo.lock().await {
-                    None => {
-                        log::debug!("No git repo");
-                        false
-                    }
-                    _ => true,
-                } {
-                    *self.repo.lock().await = Some(Repository::open(".").unwrap());
-
-                }
+                // if !match *self.repo.lock().await {
+                //     None => {
+                //         log::debug!("No git repo");
+                //         false
+                //     }
+                //     _ => true,
+                // } {
+                //     *self.repo.lock().await = Some(Repository::open(".").unwrap());
+                // }
+                log::debug!("{:?}", self.repo.lock().await.state());
                 on_start(neovim).await;
-                match &*self.repo.lock().await {
-                    Some(repo) => {
-                        log::debug!("{:?}", repo.state());
-                        log::debug!("{:?}", repo.head().unwrap().name());
-                    }
-                    None => {}
-                }
-
+                // match &*self.repo.lock().await {
+                //     Some(repo) => {
+                //         log::debug!("{:?}", repo.state());
+                //         log::debug!("{:?}", repo.head().unwrap().name());
+                //     }
+                //     None => {}
+                // }
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
@@ -117,7 +117,7 @@ async fn main() {
         eprintln!("Error configuring logging with {}: {:?}", config_file, e);
         return;
     }
-    let repo = Arc::new(Mutex::new(None));
+    let repo = Arc::new(Mutex::new(Repository::open(".").unwrap()));
     let handler = NeovimHandler { repo };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
