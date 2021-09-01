@@ -11,6 +11,8 @@ use std::sync::Arc;
 use tokio::io::Stdout;
 use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use tokio::time;
+mod node;
+use node::Node;
 
 #[derive(Clone)]
 struct NeovimHandler {
@@ -118,6 +120,7 @@ async fn main() {
         return;
     }
     let repo = Arc::new(Mutex::new(Repository::open(".").unwrap()));
+    // interval.tick().await;
     let handler = NeovimHandler { repo };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
