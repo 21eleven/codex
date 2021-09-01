@@ -12,7 +12,7 @@ use tokio::io::Stdout;
 use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use tokio::time;
 mod node;
-use node::Node;
+use node::{Node, Page };
 
 #[derive(Clone)]
 struct NeovimHandler {
@@ -25,6 +25,8 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     // for (k, v) in env::vars() {
     //     log::debug!("::env {}: {}", k, v);
     // }
+    let tnode: Page= Node::new("test".to_string());
+    debug!("{:?}", tnode);
     nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_millis(250));
