@@ -1,6 +1,6 @@
-use chrono::{Local , DateTime};
+use chrono::{DateTime, Local};
 
-type Datetime = DateTime<Local>; 
+type Datetime = DateTime<Local>;
 
 #[derive(Debug)]
 pub struct Page {
@@ -15,13 +15,30 @@ pub struct Page {
 
 pub trait Node {
     fn new(name: String) -> Self;
+    fn load(path: String) -> Self;
+    fn rename(new_name: String);
+    fn link(pointing_to: String);
 }
-
 
 impl Node for Page {
     fn new(name: String) -> Page {
-
-        Page { name, tags: vec![], links: vec![], backlinks: vec![], created: Local::now(), updated: Local::now(), updates: 1 }
-
+        Page {
+            name,
+            tags: vec![],
+            links: vec![],
+            backlinks: vec![],
+            created: Local::now(),
+            updated: Local::now(),
+            updates: 1,
+        }
+    }
+    fn load(path: String) -> Page {
+        todo!();
+    }
+    fn rename(_: String) {
+        todo!()
+    }
+    fn link(pointing_to: String) {
+        todo!()
     }
 }
