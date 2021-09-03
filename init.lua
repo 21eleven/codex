@@ -60,3 +60,4 @@ map('n', '<leader>h', '<C-w>h<CR>0', opt)
 map('n', '<leader>l', '<C-w>l<CR>0', opt)
 
 vim.cmd [[autocmd VimEnter * lua Codex.start()]]
+vim.cmd [[autocmd VimLeave * lua Codex.stop()]]

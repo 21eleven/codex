@@ -25,8 +25,9 @@ function M.stop()
     if _t.job_id == nil then
         return
     end
+    -- vim.rpcrequest(_t.job_id, "stop")
     vim.rpcnotify(_t.job_id, "stop")
-    vim.fn.jobstop(_t.job_id)
+    -- vim.fn.jobstop(_t.job_id)
     _t.job_id = nil
 end
 

@@ -81,16 +81,34 @@ impl Handler for NeovimHandler {
                     }
                 });
             }
+            "stop" => {
+                tokio::spawn(async move {
+                    let mut interval = time::interval(time::Duration::from_secs(3));
+                    interval.tick().await;
+                    debug!("woke up, closing");
+                });
+            }
             _ => {}
         }
     }
     async fn handle_request(
         &self,
-        _name: String,
+        name: String,
         _args: Vec<Value>,
         _neovim: Neovim<Compat<Stdout>>,
     ) -> Result<Value, Value> {
-        Ok(Value::Nil)
+        debug!("in request handler");
+        match name.as_str() {
+            // "stop" => {
+            //     let mut interval = time::interval(time::Duration::from_secs(3));
+            //     interval.tick().await;
+            //     debug!("woke up, closing");
+            //     Ok(Value::Nil)
+            // }
+            _ => Ok(Value::Nil) 
+
+        }
+        
     }
 }
 
