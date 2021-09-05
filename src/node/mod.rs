@@ -6,13 +6,58 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::io;
 use crate::tree;
+use std::collections::{HashSet};
 
 // type Datetime = DateTime<Local>;
+struct HierarchicalIdentifier {
+    codex_path: String
+}
+
+pub enum Entry { Page, Todo }
+
+type Entity = Box<Node>;
+
+pub struct Node {
+    id: HierarchicalIdentifier,
+    r#type: Entry,
+    meta: String,
+    parent: Option<Box<Node>>,
+    siblings: Box<Vec<String>>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    children: Vec<String>, // parent has a point to it's children shared/sibling/family vec
+    links: Vec<Box<Node>>,
+    backlinks: Vec<Box<Node>>,
+    tags: HashSet<String>,
+}
+
+impl Node {
+    fn new(path: String, name: String, parent:Option<Node>) -> Node{
+        Node::init(path, name, Entry::Page)
+    }
+    fn init(path: String, name: String, ntype: Entry) ->Node {
+        match ntype {
+            Entry::Page => {
+                let meta_string = to_toml(PageMeta::new(name));
 
 
+                Node {
+
+                }
+
+            }
+            _ => todo!()
+            
+        }
+    }
+    fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
+        let mut node = PageMeta::new(name);
+        let n = tree::new_sibling_id(path)?;
+        
+        Ok(node)
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Page {
+pub struct PageMeta {
     pub name: String,
     pub tags: Vec<String>,
     pub links: Vec<String>,
@@ -22,20 +67,20 @@ pub struct Page {
     pub updates: i64,
 }
 
-pub trait Node {
-    fn new(name: String) -> Self;
-    fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Self> where Self: Sized;
-    fn load(path: String) -> Self;
-    fn rename(new_name: String);
-    fn link(pointing_to: String);
-    fn tag(&mut self, new_tag: String);
-    //fn mark_updated;
-}
+// pub trait NodeMeta {
+//     fn new(name: String) -> Self;
+//     fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Self> where Self: Sized;
+//     fn load(path: String) -> Self;
+//     fn rename(new_name: String);
+//     fn link(pointing_to: String);
+//     fn tag(&mut self, new_tag: String);
+//     //fn mark_updated;
+// }
 
-impl Node for Page {
-    fn new(name: String) -> Page {
+impl PageMeta {
+    fn new(name: String) -> PageMeta {
         let now = Local::now();
-        Page {
+        PageMeta {
             name,
             tags: vec![],
             links: vec![],
@@ -45,13 +90,13 @@ impl Node for Page {
             updates: 1,
         }
     }
-    fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Page> {
-        let mut node = Node::new(name);
-        let n = tree::new_sibling_id(path)?;
-        
-        Ok(node)
-    }
-    fn load(path: String) -> Page {
+    // fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
+    //     let mut node = PageMeta::new(name);
+    //     let n = tree::new_sibling_id(path)?;
+    //     
+    //     Ok(node)
+    // }
+    fn load(path: String) -> PageMeta {
         todo!();
     }
     fn rename(_: String) {
@@ -67,33 +112,33 @@ impl Node for Page {
 pub fn to_toml(node: Page) -> String {
     toml::to_string_pretty(&node).unwrap()
 }
-
-pub fn lay_foundation() {
-    fs::create_dir("./codex").unwrap();
-    let mut journal: Page = Node::new("journal".to_string());
-    journal.tag("journal".to_string());
-    let journal_root_path = Path::new("codex/1-journal");
-    create_dir(journal_root_path).unwrap();
-    let data = journal_root_path.join("_.md");
-    let metadata = journal_root_path.join("meta.toml");
-    let display = journal_root_path.display();
-    let mut file = match File::create(metadata.as_path()) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-    let journal_toml = to_toml(journal);
-
-    match file.write_all(journal_toml.as_str().as_bytes()) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(_) => debug!("successfully wrote to {}", display),
-    }
-
-    let mut file = match File::create(data.as_path()) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-    match file.write_all("".as_bytes()) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(_) => debug!("successfully wrote to {}", display),
-    }
-}
+// 
+// pub fn lay_foundation() {
+//     fs::create_dir("./codex").unwrap();
+//     let mut journal: Page = Node::new("journal".to_string());
+//     journal.tag("journal".to_string());
+//     let journal_root_path = Path::new("codex/1-journal");
+//     create_dir(journal_root_path).unwrap();
+//     let data = journal_root_path.join("_.md");
+//     let metadata = journal_root_path.join("meta.toml");
+//     let display = journal_root_path.display();
+//     let mut file = match File::create(metadata.as_path()) {
+//         Err(why) => panic!("couldn't create {}: {}", display, why),
+//         Ok(file) => file,
+//     };
+//     let journal_toml = to_toml(journal);
+// 
+//     match file.write_all(journal_toml.as_str().as_bytes()) {
+//         Err(why) => panic!("couldn't write to {}: {}", display, why),
+//         Ok(_) => debug!("successfully wrote to {}", display),
+//     }
+// 
+//     let mut file = match File::create(data.as_path()) {
+//         Err(why) => panic!("couldn't create {}: {}", display, why),
+//         Ok(file) => file,
+//     };
+//     match file.write_all("".as_bytes()) {
+//         Err(why) => panic!("couldn't write to {}: {}", display, why),
+//         Ok(_) => debug!("successfully wrote to {}", display),
+//     }
+// }
