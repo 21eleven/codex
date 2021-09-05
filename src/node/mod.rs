@@ -1,11 +1,15 @@
 use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
-use std::fs::{create_dir, File};
+use std::fs::{self, File, create_dir};
 use std::io::prelude::*;
 use std::path::Path;
+use std::io;
+use crate::tree;
 
 // type Datetime = DateTime<Local>;
+
+
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Page {
@@ -20,6 +24,7 @@ pub struct Page {
 
 pub trait Node {
     fn new(name: String) -> Self;
+    fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Self> where Self: Sized;
     fn load(path: String) -> Self;
     fn rename(new_name: String);
     fn link(pointing_to: String);
@@ -29,15 +34,22 @@ pub trait Node {
 
 impl Node for Page {
     fn new(name: String) -> Page {
+        let now = Local::now();
         Page {
             name,
             tags: vec![],
             links: vec![],
             backlinks: vec![],
-            created: Local::now(),
-            updated: Local::now(),
+            created: now,
+            updated: now,
             updates: 1,
         }
+    }
+    fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Page> {
+        let mut node = Node::new(name);
+        let n = tree::new_sibling_id(path)?;
+        
+        Ok(node)
     }
     fn load(path: String) -> Page {
         todo!();
@@ -57,9 +69,10 @@ pub fn to_toml(node: Page) -> String {
 }
 
 pub fn lay_foundation() {
+    fs::create_dir("./codex").unwrap();
     let mut journal: Page = Node::new("journal".to_string());
     journal.tag("journal".to_string());
-    let journal_root_path = Path::new("data/1-journal");
+    let journal_root_path = Path::new("codex/1-journal");
     create_dir(journal_root_path).unwrap();
     let data = journal_root_path.join("_.md");
     let metadata = journal_root_path.join("meta.toml");

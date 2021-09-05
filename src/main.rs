@@ -12,6 +12,7 @@ use tokio::io::Stdout;
 use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use tokio::time;
 mod node;
+mod tree;
 use node::{lay_foundation, Node, Page};
 
 #[derive(Clone)]
@@ -32,6 +33,10 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     // let tnode2: Page = toml::from_str(&nodestring).unwrap();
     // debug!("{:?}", tnode2);
 
+    match env::current_dir().unwrap().to_str() {
+        Some(dir) => nvim.command(&format!("cd {}/codex", dir)).await.unwrap(),
+        None => {}
+    }
     nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_millis(250));
@@ -56,6 +61,10 @@ impl Handler for NeovimHandler {
             "start" => {
                 log::debug!("starting CODEX!");
                 log::debug!("{:?}", self.repo.lock().await.state());
+                match tree::Tree::build("./codex/".to_string()) {
+                    Ok(tree) => debug!("tree gud!"), // {:?}", tree),
+                    Err(e) => error!("tree ERROR! {:?}", e),
+                }
                 on_start(neovim).await;
             }
             "ping" => {
@@ -105,10 +114,8 @@ impl Handler for NeovimHandler {
             //     debug!("woke up, closing");
             //     Ok(Value::Nil)
             // }
-            _ => Ok(Value::Nil) 
-
+            _ => Ok(Value::Nil),
         }
-        
     }
 }
 
@@ -117,8 +124,8 @@ async fn main() {
     let plugin_dir = if let Ok(dir) = std::env::var("CODEX_HOME") {
         dir
     } else {
-        std::env::set_var("CODEX_HOME", ".");
-        ".".to_string()
+        let error_msg = "ENV var CODEX_HOME not set, panicking";
+        std::panic::panic_any(error_msg);
     };
     let config_file = format!("{}/codex-log.toml", plugin_dir);
 
@@ -128,14 +135,14 @@ async fn main() {
         eprintln!("Error configuring logging with {}: {:?}", config_file, e);
         return;
     }
-    debug!("{:?}", env::current_dir().unwrap());
+    debug!("backend live within: {:?}", env::current_dir().unwrap());
     // When opening the repo we could inspect the result and init the repo
     // and build the foundational nodes
-    let repo = Arc::new(Mutex::new(match Repository::open("./data") {
+    let repo = Arc::new(Mutex::new(match Repository::open("./") {
         Ok(repo) => repo,
         Err(_) => {
             lay_foundation();
-            Repository::init("./data").unwrap()
+            Repository::init("./").unwrap()
         }
     }));
     // let repo = Arc::new(Mutex::new(Repository::open("./data").unwrap()));
