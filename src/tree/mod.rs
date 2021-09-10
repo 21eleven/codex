@@ -72,7 +72,7 @@ fn is_metadata_toml(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-pub fn new_sibling_id(path: PathBuf) -> u64 {
+pub fn new_sibling_id(path: &PathBuf) -> u64 {
     let search_dir = match path.parent() {
         Some(parent) => PathBuf::from("./codex/").join(parent),
         None => PathBuf::from("./codex/"),

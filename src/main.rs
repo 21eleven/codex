@@ -13,7 +13,7 @@ use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use tokio::time;
 mod node;
 mod tree;
-use node::{lay_foundation, Node, Page};
+use node::{lay_foundation, Node};
 
 #[derive(Clone)]
 struct NeovimHandler {
