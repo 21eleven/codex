@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::error;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -64,6 +64,31 @@ impl fmt::Debug for NodeFilesMissingError {
 
 impl error::Error for NodeFilesMissingError {}
 
+fn is_metadata_toml(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.ends_with("meta.toml"))
+        .unwrap_or(false)
+}
+
+pub fn new_sibling_id(path: PathBuf) -> u64 {
+    let search_dir = match path.parent() {
+        Some(parent) => PathBuf::from("./codex/").join(parent),
+        None => PathBuf::from("./codex/"),
+    };
+    WalkDir::new(search_dir)
+        .sort_by_file_name()
+        .contents_first(true)
+        .min_depth(1)
+        .max_depth(2)
+        .into_iter()
+        .filter_entry(|e| is_metadata_toml(e))
+        .map(|e| e.unwrap().into_path())
+        .collect::<Vec<PathBuf>>()
+        .len() as u64
+}
+
 impl Tree {
     pub fn build(root: String) -> Result<Tree> {
         let mut file_check: HashSet<PathBuf> = HashSet::new();
@@ -79,7 +104,7 @@ impl Tree {
                     // that are not valid UTF-8... 🙄
                     if node_path.path().to_str() == Some(root.as_str()) {
                         debug!("skipping root dir {:?} in tree build", &root);
-                        continue;
+                        continue; // can just skip root dir by using min_depth(1) on WalkDir
                     } else if !node_path.path().is_dir() {
                         // should *always* encounter node files fites
                         // when dir is encounter will check in set to
@@ -117,6 +142,3 @@ pub fn discover_tree(root: String) -> Result<Tree> {
     Ok(Tree { chk: true })
 }
 
-pub fn new_sibling_id(path: String) -> Result<i64> {
-    todo!()
-}
