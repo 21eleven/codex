@@ -95,17 +95,12 @@ impl Tree {
         for fs_node in WalkDir::new(root.as_str())
             .sort_by_file_name()
             .contents_first(true)
+            .min_depth(1) //skips root dir
         {
             debug!("{:?}", fs_node);
             match fs_node {
                 Ok(node_path) => {
-                    // `Path.to_str()` returns option bc
-                    // some operating system allow paths
-                    // that are not valid UTF-8... 🙄
-                    if node_path.path().to_str() == Some(root.as_str()) {
-                        debug!("skipping root dir {:?} in tree build", &root);
-                        continue; // can just skip root dir by using min_depth(1) on WalkDir
-                    } else if !node_path.path().is_dir() {
+                    if !node_path.path().is_dir() {
                         // should *always* encounter node files fites
                         // when dir is encounter will check in set to
                         // verify dir struct not corrupt
