@@ -1,3 +1,4 @@
+use crate::node::{Node, NodeRef};
 use log::*;
 use std::collections::{HashMap, HashSet};
 use std::error;
@@ -91,11 +92,56 @@ pub fn new_sibling_id(path: &PathBuf) -> u64 {
 
 impl Tree {
     pub fn build(root: String) -> Result<Tree> {
+        fn dfs(
+            name: Option<PathBuf>,
+            node_map: &mut HashMap<NodeRef, Node>,
+            parent: Option<NodeRef>,
+            siblings: Vec<NodeRef>,
+            base: &Path,
+        ) {
+            // start w root dir
+            // find whats in cwd
+            // verify _.md and meta.toml
+            // ignore other non-dirs
+            let n = base.to_str().unwrap().chars().count();
+            let search_dir = match name.clone() {
+                None => base.to_path_buf(),
+                Some(name_path) => base.join(name_path.as_path()),
+            };
+            let children = WalkDir::new(search_dir)
+                .sort_by_file_name()
+                .contents_first(true)
+                .min_depth(2)
+                .max_depth(2)
+                .into_iter()
+                .filter_entry(|e| is_metadata_toml(e))
+                .map(|e| {
+                    PathBuf::from(
+                        e.unwrap()
+                            .into_path()
+                            .parent()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .chars()
+                            .skip(n)
+                            .collect::<String>(),
+                    )
+                }).collect::<Vec<PathBuf>>();
+            for node in &children {
+                dfs(Some(node.clone()), node_map, name.clone(), children.clone(), base);
+            }
+            match name {
+                Some(namepath) => debug!("{:?}", namepath),
+                None => {}
+            }
+        }
         let mut file_check: HashSet<PathBuf> = HashSet::new();
         for fs_node in WalkDir::new(root.as_str())
             .sort_by_file_name()
             .contents_first(true)
-            .min_depth(1) //skips root dir
+            .min_depth(1)
+        //skips root dir
         {
             debug!("{:?}", fs_node);
             match fs_node {
@@ -110,7 +156,10 @@ impl Tree {
                             file_check.contains(&node_path.path().join("_.md")),
                             file_check.contains(&node_path.path().join("meta.toml")),
                         ) {
-                            (true, true) => {}
+                            (true, true) => {
+                                // build node
+                                // todo!()
+                            }
                             (c1, c2) => {
                                 return Err(NodeFilesMissingError {
                                     content_file_exists: c1,
@@ -136,4 +185,3 @@ impl Tree {
 pub fn discover_tree(root: String) -> Result<Tree> {
     Ok(Tree { chk: true })
 }
-
