@@ -20,14 +20,16 @@ pub enum Entry {
 
 type Entity = Box<Node>;
 
+pub type NodeRef = PathBuf;
+
 pub struct Node {
-    id: PathBuf,
+    id: NodeRef,
     name: String,
-    parent: Option<Box<Node>>,
-    siblings: Box<Vec<String>>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    children: Vec<String>,      // parent has a point to it's children shared/sibling/family vec
-    links: Vec<Box<Node>>,
-    backlinks: Vec<Box<Node>>,
+    parent: Option<NodeRef>,
+    siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    children: Vec<NodeRef>,      // parent has a point to it's children shared/sibling/family vec
+    links: Vec<NodeRef>,
+    backlinks: Vec<NodeRef>,
     tags: HashSet<String>,
     created: DateTime<Local>,
     updates: u64,
@@ -62,7 +64,7 @@ impl Node {
             id: node_path,
             name,
             parent: parent_option,
-            siblings: Box::new(vec![]),
+            siblings: vec![],
             children: vec![],
             links: vec![],
             backlinks: vec![],
