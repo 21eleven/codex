@@ -3,7 +3,7 @@ use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::fs::{self, create_dir, File};
+use std::fs::{self, File, create_dir, read_to_string};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -118,7 +118,7 @@ pub struct NodeMeta {
 // }
 
 impl NodeMeta {
-    fn new(name: String) -> NodeMeta {
+    pub fn new(name: String) -> NodeMeta {
         let now = Local::now();
         NodeMeta {
             name,
@@ -129,6 +129,10 @@ impl NodeMeta {
             updated: now,
             updates: 1,
         }
+    }
+    pub fn from_toml(toml_path: &Path) -> NodeMeta {
+        let toml_string = read_to_string(toml_path).unwrap();
+        toml::from_str(&toml_string).unwrap()
     }
 // fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
 //     let mut node = PageMeta::new(name);

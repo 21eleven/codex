@@ -1,10 +1,11 @@
-use crate::node::{Node, NodeRef};
+use crate::node::{Node, NodeRef, NodeMeta};
 use log::*;
 use std::collections::{HashMap, HashSet};
 use std::error;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
+use std::fs::read_to_string;
 
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -162,7 +163,8 @@ impl Tree {
                 Some(namepath) => {
                     debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
-                    debug!("{:?}", &meta_path);
+                    let node_meta = NodeMeta::from_toml(&meta_path);
+                    debug!("{:?}", &node_meta);
                 }
                 None => {}
             }
