@@ -66,11 +66,15 @@ impl fmt::Debug for NodeFilesMissingError {
 impl error::Error for NodeFilesMissingError {}
 
 fn is_metadata_toml(entry: &DirEntry) -> bool {
+    debug!("{:?}", entry.clone());
     entry
+        .clone()
         .file_name()
         .to_str()
-        .map(|s| s.ends_with("meta.toml"))
-        .unwrap_or(false)
+        .unwrap()
+        .ends_with("meta.toml")
+    // .map(|s| s.ends_with("meta.toml"))
+    //.unwrap()//_or(false)
 }
 
 pub fn new_sibling_id(path: &PathBuf) -> u64 {
@@ -108,17 +112,32 @@ impl Tree {
                 None => base.to_path_buf(),
                 Some(name_path) => base.join(name_path.as_path()),
             };
+            debug!(
+                "{:?}",
+                WalkDir::new(&search_dir)
+                    .sort_by_file_name()
+                    .contents_first(true)
+                    .min_depth(2)
+                    .max_depth(2)
+                    .into_iter()
+                    // .filter_entry(|e| e)
+                    // .filter_entry(|e| is_metadata_toml(e))
+                    .map(|e| e.unwrap())
+                    .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
+                    .collect::<Vec<DirEntry>>()
+            );
             let children = WalkDir::new(search_dir)
                 .sort_by_file_name()
                 .contents_first(true)
                 .min_depth(2)
                 .max_depth(2)
                 .into_iter()
-                .filter_entry(|e| is_metadata_toml(e))
+                // .filter_entry(|e| is_metadata_toml(e))
+                .map(|e| e.unwrap())
+                .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
                 .map(|e| {
                     PathBuf::from(
-                        e.unwrap()
-                            .into_path()
+                        e.into_path()
                             .parent()
                             .unwrap()
                             .to_str()
@@ -127,16 +146,30 @@ impl Tree {
                             .skip(n)
                             .collect::<String>(),
                     )
-                }).collect::<Vec<PathBuf>>();
+                })
+                .collect::<Vec<PathBuf>>();
+            debug!("{:?}", children);
             for node in &children {
-                dfs(Some(node.clone()), node_map, name.clone(), children.clone(), base);
+                dfs(
+                    Some(node.clone()),
+                    node_map,
+                    name.clone(),
+                    children.clone(),
+                    base,
+                );
             }
             match name {
-                Some(namepath) => debug!("{:?}", namepath),
+                Some(namepath) => {
+                    debug!("{:?}", &namepath);
+                    let meta_path = base.join(&namepath).join("meta.toml");
+                    debug!("{:?}", &meta_path);
+                }
                 None => {}
             }
         }
         let mut file_check: HashSet<PathBuf> = HashSet::new();
+        let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
+        dfs(None, &mut node_map, None, vec![], Path::new(&root));
         for fs_node in WalkDir::new(root.as_str())
             .sort_by_file_name()
             .contents_first(true)
