@@ -3,7 +3,8 @@ use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::fs::{self, File, create_dir, read_to_string};
+use std::convert::TryInto;
+use std::fs::{self, create_dir, read_to_string, File};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -22,16 +23,18 @@ type Entity = Box<Node>;
 
 pub type NodeRef = PathBuf;
 
+#[derive(Debug)]
 pub struct Node {
     id: NodeRef,
     name: String,
     parent: Option<NodeRef>,
     siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    children: Vec<NodeRef>,      // parent has a point to it's children shared/sibling/family vec
+    children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
     links: Vec<NodeRef>,
     backlinks: Vec<NodeRef>,
     tags: HashSet<String>,
     created: DateTime<Local>,
+    updated: DateTime<Local>,
     updates: u64,
 }
 
@@ -60,6 +63,7 @@ impl Node {
                 )
             }
         };
+        let now = Local::now();
         Node {
             id: node_path,
             name,
@@ -69,8 +73,35 @@ impl Node {
             links: vec![],
             backlinks: vec![],
             tags: HashSet::new(),
-            created: Local::now(),
+            created: now,
+            updated: now,
             updates: 1,
+        }
+    }
+    pub fn from_tree(
+        id: PathBuf,
+        toml_path: &Path,
+        parent: Option<NodeRef>,
+        siblings: Vec<NodeRef>,
+        children: Vec<NodeRef>,
+    ) -> Node {
+        let (name, tags, links, backlinks, created, updated, updates) =
+            NodeMeta::from_toml(toml_path).data();
+        Node {
+            id,
+            name,
+            parent,
+            siblings,
+            children,
+            links: links.into_iter().map(|p| p.try_into().unwrap()).collect(),
+            backlinks: backlinks
+                .into_iter()
+                .map(|p| p.try_into().unwrap())
+                .collect(),
+            tags: tags.into_iter().collect(),
+            created,
+            updated,
+            updates,
         }
     }
     //     fn init(path: String, name: String, ntype: Entry) ->Node {
@@ -102,11 +133,11 @@ pub struct NodeMeta {
     pub tags: Vec<String>,
     pub links: Vec<String>,
     pub backlinks: Vec<String>,
-    #[serde(with="codex_date_format")]
+    #[serde(with = "codex_date_format")]
     pub created: DateTime<Local>,
-    #[serde(with="codex_date_format")]
+    #[serde(with = "codex_date_format")]
     pub updated: DateTime<Local>,
-    pub updates: i64,
+    pub updates: u64,
 }
 
 // pub trait NodeMeta {
@@ -136,21 +167,42 @@ impl NodeMeta {
         let toml_string = read_to_string(toml_path).unwrap();
         toml::from_str(&toml_string).unwrap()
     }
-// fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
-//     let mut node = PageMeta::new(name);
-//     let n = tree::new_sibling_id(path)?;
-//
-//     Ok(node)
-// }
-//     fn load(path: String) -> PageMeta {
-//         todo!();
-//     }
-//     fn rename(_: String) {
-//         todo!()
-//     }
-//     fn link(pointing_to: String) {
-//         todo!()
-//     }
+    pub fn data(
+        self,
+    ) -> (
+        String,
+        Vec<String>,
+        Vec<String>,
+        Vec<String>,
+        DateTime<Local>,
+        DateTime<Local>,
+        u64,
+    ) {
+        (
+            self.name,
+            self.tags,
+            self.links,
+            self.backlinks,
+            self.created,
+            self.updated,
+            self.updates,
+        )
+    }
+    // fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
+    //     let mut node = PageMeta::new(name);
+    //     let n = tree::new_sibling_id(path)?;
+    //
+    //     Ok(node)
+    // }
+    //     fn load(path: String) -> PageMeta {
+    //         todo!();
+    //     }
+    //     fn rename(_: String) {
+    //         todo!()
+    //     }
+    //     fn link(pointing_to: String) {
+    //         todo!()
+    //     }
     fn tag(&mut self, new_tag: String) {
         self.tags.push(new_tag);
     }
@@ -159,31 +211,28 @@ pub fn to_toml(node: NodeMeta) -> String {
     toml::to_string_pretty(&node).unwrap()
 }
 
-mod codex_date_format{
+mod codex_date_format {
     use chrono::{DateTime, Local, TimeZone};
-    use serde::{self, Deserialize, Serializer, Deserializer};
+    use serde::{self, Deserialize, Deserializer, Serializer};
 
-    const FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S%z";
-    
-    pub fn serialize<S>(
-        date: &DateTime<Local>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    const FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S%z"; // or `%:z`?
+
+    pub fn serialize<S>(date: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let s = format!("{}", date.format(FORMAT));
         serializer.serialize_str(&s)
     }
-    
-    pub fn deserialize<'de, D>(
-        deserializer: D,
-    ) -> Result<DateTime<Local>, D::Error>
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Local>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Local.datetime_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
+        Local
+            .datetime_from_str(&s, FORMAT)
+            .map_err(serde::de::Error::custom)
     }
 }
 

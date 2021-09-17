@@ -113,27 +113,12 @@ impl Tree {
                 None => base.to_path_buf(),
                 Some(name_path) => base.join(name_path.as_path()),
             };
-            debug!(
-                "{:?}",
-                WalkDir::new(&search_dir)
-                    .sort_by_file_name()
-                    .contents_first(true)
-                    .min_depth(2)
-                    .max_depth(2)
-                    .into_iter()
-                    // .filter_entry(|e| e)
-                    // .filter_entry(|e| is_metadata_toml(e))
-                    .map(|e| e.unwrap())
-                    .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
-                    .collect::<Vec<DirEntry>>()
-            );
             let children = WalkDir::new(search_dir)
                 .sort_by_file_name()
                 .contents_first(true)
                 .min_depth(2)
                 .max_depth(2)
                 .into_iter()
-                // .filter_entry(|e| is_metadata_toml(e))
                 .map(|e| e.unwrap())
                 .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
                 .map(|e| {
@@ -149,7 +134,6 @@ impl Tree {
                     )
                 })
                 .collect::<Vec<PathBuf>>();
-            debug!("{:?}", children);
             for node in &children {
                 dfs(
                     Some(node.clone()),
@@ -163,8 +147,8 @@ impl Tree {
                 Some(namepath) => {
                     debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
-                    let node_meta = NodeMeta::from_toml(&meta_path);
-                    debug!("{:?}", &node_meta);
+                    let node = Node::from_tree(namepath, &meta_path, parent, siblings, children);
+                    debug!("{:?}", &node);
                 }
                 None => {}
             }
