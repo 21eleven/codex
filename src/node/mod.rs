@@ -104,27 +104,20 @@ impl Node {
             updates,
         }
     }
-    //     fn init(path: String, name: String, ntype: Entry) ->Node {
-    //         match ntype {
-    //             Entry::Page => {
-    //                 let meta_string = to_toml(PageMeta::new(name));
-    //
-    //
-    //                 Node {
-    //
-    //                 }
-    //
-    //             }
-    //             _ => todo!()
-    //
-    //         }
-    //     }
-    //     fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
-    //         let mut node = PageMeta::new(name);
-    //         let n = tree::new_sibling_id(path)?;
-    //
-    //         Ok(node)
-    //     }
+    pub fn write(&mut self) {
+        todo!();
+    }
+    pub fn tick_update(&mut self) {
+        let now = Local::now();
+
+        if now.date() != self.updated.date() {
+            self.updates += 1;
+        }
+        self.updated = now;
+    }
+    pub fn create_child(&mut self) {
+        todo!();
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -139,16 +132,6 @@ pub struct NodeMeta {
     pub updated: DateTime<Local>,
     pub updates: u64,
 }
-
-// pub trait NodeMeta {
-//     fn new(name: String) -> Self;
-//     fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<Self> where Self: Sized;
-//     fn load(path: String) -> Self;
-//     fn rename(new_name: String);
-//     fn link(pointing_to: String);
-//     fn tag(&mut self, new_tag: String);
-//     //fn mark_updated;
-// }
 
 impl NodeMeta {
     pub fn new(name: String) -> NodeMeta {
@@ -188,21 +171,6 @@ impl NodeMeta {
             self.updates,
         )
     }
-    // fn create(path: String, name: String, tags: Option<Vec<String>>) -> tree::Result<PageMeta> {
-    //     let mut node = PageMeta::new(name);
-    //     let n = tree::new_sibling_id(path)?;
-    //
-    //     Ok(node)
-    // }
-    //     fn load(path: String) -> PageMeta {
-    //         todo!();
-    //     }
-    //     fn rename(_: String) {
-    //         todo!()
-    //     }
-    //     fn link(pointing_to: String) {
-    //         todo!()
-    //     }
     fn tag(&mut self, new_tag: String) {
         self.tags.push(new_tag);
     }
