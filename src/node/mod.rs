@@ -25,17 +25,17 @@ pub type NodeRef = PathBuf;
 
 #[derive(Debug)]
 pub struct Node {
-    id: NodeRef,
-    name: String,
-    parent: Option<NodeRef>,
-    siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
-    links: Vec<NodeRef>,
-    backlinks: Vec<NodeRef>,
-    tags: HashSet<String>,
-    created: DateTime<Local>,
-    updated: DateTime<Local>,
-    updates: u64,
+    pub id: NodeRef,
+    pub name: String,
+    pub parent: Option<NodeRef>,
+    pub siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    pub children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
+    pub links: Vec<NodeRef>,
+    pub backlinks: Vec<NodeRef>,
+    pub tags: HashSet<String>,
+    pub created: DateTime<Local>,
+    pub updated: DateTime<Local>,
+    pub updates: u64,
 }
 
 fn prepare_path_name(node_name: &String) -> String {
@@ -53,7 +53,14 @@ impl Node {
     fn new(path: String, name: String, parent: Option<Node>) -> Node {
         let path_name = prepare_path_name(&name);
         let (node_path, parent_option) = match parent {
-            Some(parent_node) => todo!(),
+            Some(parent_node) => {
+                let path = parent_node.id.clone();
+                let sibling_num = new_sibling_id(&path);
+                (
+                    path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name))),
+                    Some(parent_node.id.clone()),
+                )
+            }
             None => {
                 let path = PathBuf::from("");
                 let sibling_num = new_sibling_id(&path);
