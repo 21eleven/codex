@@ -155,15 +155,22 @@ impl NodeMeta {
             updates: 1,
         }
     }
-    pub fn from(node: Node) -> NodeMeta {
+    pub fn from(node: &Node) -> NodeMeta {
         NodeMeta {
-            name: node.name,
-            tags: node.tags,
-            links: node.links,
+            name: node.name.clone(),
+            tags: node
+                .tags.clone()
+                .into_iter()
+                .collect(),
+            links: node
+                .links.clone()
+                .into_iter()
+                .map(|x| x.to_str().unwrap().to_owned())
+                .collect(),
             backlinks: node
-                .backlinks
-                .iter()
-                .map(|x| x.to_str().to_owned())
+                .backlinks.clone()
+                .into_iter()
+                .map(|x| x.to_str().unwrap().to_owned())
                 .collect(),
             created: node.created,
             updated: node.updated,
