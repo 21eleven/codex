@@ -18,23 +18,13 @@ use node::{lay_foundation, Node};
 
 #[derive(Clone)]
 struct NeovimHandler {
-    // repo: Arc<Mutex<Option<Repository>>>,
     repo: Arc<Mutex<Repository>>,
     tree: Arc<Mutex<tree::Tree>>,
 }
 
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     let yyyymmdd = Local::now().format("%Y%m%d");
-    // for (k, v) in env::vars() {
-    //     log::debug!("::env {}: {}", k, v);
-    // }
-    // let tnode: Page = Node::new("test".to_string());
-    // debug!("{:?}", tnode);
-    // let nodestring = toml::to_string_pretty(&tnode).unwrap();
-    // debug!("{:?}", nodestring);
-    // let tnode2: Page = toml::from_str(&nodestring).unwrap();
-    // debug!("{:?}", tnode2);
-
+    
     match env::current_dir().unwrap().to_str() {
         Some(dir) => nvim.command(&format!("cd {}/codex", dir)).await.unwrap(),
         None => {}
@@ -62,12 +52,7 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
-                // log::debug!("{:?}", self.repo.lock().await.state());
                 log::debug!("{:?}", self.repo.lock().unwrap().state());
-                // match tree::Tree::build("./codex/".to_string()) {
-                //     Ok(tree) => debug!("tree gud!"), // {:?}", tree),
-                //     Err(e) => error!("tree ERROR! {:?}", e),
-                // }
                 log::debug!("tree on startup: {:?}", self.tree.lock().unwrap());
                 on_start(neovim).await;
             }
@@ -140,8 +125,6 @@ async fn main() {
         return;
     }
     debug!("backend live within: {:?}", env::current_dir().unwrap());
-    // When opening the repo we could inspect the result and init the repo
-    // and build the foundational nodes
     let repo = Arc::new(Mutex::new(match Repository::open("./") {
         Ok(repo) => repo,
         Err(_) => {
@@ -161,8 +144,6 @@ async fn main() {
             }
         },
     ));
-    // let repo = Arc::new(Mutex::new(Repository::open("./data").unwrap()));
-    // interval.tick().await;
     let handler = NeovimHandler { repo, tree };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
