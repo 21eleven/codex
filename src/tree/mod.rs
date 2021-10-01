@@ -9,8 +9,9 @@ use std::fs::read_to_string;
 
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
+#[derive(Debug)]
 pub struct Tree {
-    chk: bool,
+    nodes: HashMap<NodeRef, Node>,
 }
 
 pub struct TreeError {
@@ -158,51 +159,51 @@ impl Tree {
         let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
         dfs(None, &mut node_map, None, vec![], Path::new(&root));
         debug!("{:?}", node_map);
-        for fs_node in WalkDir::new(root.as_str())
-            .sort_by_file_name()
-            .contents_first(true)
-            .min_depth(1)
-        //skips root dir
-        {
-            debug!("{:?}", fs_node);
-            match fs_node {
-                Ok(node_path) => {
-                    if !node_path.path().is_dir() {
-                        // should *always* encounter node files fites
-                        // when dir is encounter will check in set to
-                        // verify dir struct not corrupt
-                        file_check.insert(node_path.into_path());
-                    } else {
-                        match (
-                            file_check.contains(&node_path.path().join("_.md")),
-                            file_check.contains(&node_path.path().join("meta.toml")),
-                        ) {
-                            (true, true) => {
-                                // build node
-                                // todo!()
-                            }
-                            (c1, c2) => {
-                                return Err(NodeFilesMissingError {
-                                    content_file_exists: c1,
-                                    metadata_file_exists: c2,
-                                    node: {
-                                        match node_path.path().to_str() {
-                                            Some(path) => String::from(path),
-                                            _ => "".to_owned(),
-                                        }
-                                    },
-                                }
-                                .into())
-                            }
-                        }
-                    }
-                }
-                Err(e) => return Err(Box::new(e)),
-            }
-        }
-        Ok(Tree { chk: true })
+        // for fs_node in WalkDir::new(root.as_str())
+        //     .sort_by_file_name()
+        //     .contents_first(true)
+        //     .min_depth(1)
+        // //skips root dir
+        // {
+        //     debug!("{:?}", fs_node);
+        //     match fs_node {
+        //         Ok(node_path) => {
+        //             if !node_path.path().is_dir() {
+        //                 // should *always* encounter node files fites
+        //                 // when dir is encounter will check in set to
+        //                 // verify dir struct not corrupt
+        //                 file_check.insert(node_path.into_path());
+        //             } else {
+        //                 match (
+        //                     file_check.contains(&node_path.path().join("_.md")),
+        //                     file_check.contains(&node_path.path().join("meta.toml")),
+        //                 ) {
+        //                     (true, true) => {
+        //                         // build node
+        //                         // todo!()
+        //                     }
+        //                     (c1, c2) => {
+        //                         return Err(NodeFilesMissingError {
+        //                             content_file_exists: c1,
+        //                             metadata_file_exists: c2,
+        //                             node: {
+        //                                 match node_path.path().to_str() {
+        //                                     Some(path) => String::from(path),
+        //                                     _ => "".to_owned(),
+        //                                 }
+        //                             },
+        //                         }
+        //                         .into())
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         Err(e) => return Err(Box::new(e)),
+        //     }
+        // }
+        Ok(Tree { nodes: node_map })
     }
 }
-pub fn discover_tree(root: String) -> Result<Tree> {
-    Ok(Tree { chk: true })
-}
+// pub fn discover_tree(root: String) -> Result<Tree> {
+//     Ok(Tree { chk: true })
+// }
