@@ -112,6 +112,8 @@ impl Node {
         }
     }
     pub fn write(&mut self) {
+        self.tick_update();
+
         todo!();
     }
     pub fn tick_update(&mut self) {
@@ -153,6 +155,21 @@ impl NodeMeta {
             updates: 1,
         }
     }
+    pub fn from(node: Node) -> NodeMeta {
+        NodeMeta {
+            name: node.name,
+            tags: node.tags,
+            links: node.links,
+            backlinks: node
+                .backlinks
+                .iter()
+                .map(|x| x.to_str().to_owned())
+                .collect(),
+            created: node.created,
+            updated: node.updated,
+            updates: node.updates,
+        }
+    }
     pub fn from_toml(toml_path: &Path) -> NodeMeta {
         let toml_string = read_to_string(toml_path).unwrap();
         toml::from_str(&toml_string).unwrap()
@@ -180,6 +197,9 @@ impl NodeMeta {
     }
     fn tag(&mut self, new_tag: String) {
         self.tags.push(new_tag);
+    }
+    pub fn to_toml(node: NodeMeta) -> String {
+        toml::to_string_pretty(&node).unwrap()
     }
 }
 pub fn to_toml(node: NodeMeta) -> String {
