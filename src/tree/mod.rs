@@ -149,6 +149,7 @@ impl Tree {
                     let meta_path = base.join(&namepath).join("meta.toml");
                     let node = Node::from_tree(namepath, &meta_path, parent, siblings, children);
                     debug!("{:?}", &node);
+                    node_map.insert(node.id.clone(), node);
                 }
                 None => {}
             }
@@ -156,6 +157,7 @@ impl Tree {
         let mut file_check: HashSet<PathBuf> = HashSet::new();
         let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
         dfs(None, &mut node_map, None, vec![], Path::new(&root));
+        debug!("{:?}", node_map);
         for fs_node in WalkDir::new(root.as_str())
             .sort_by_file_name()
             .contents_first(true)
