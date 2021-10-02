@@ -52,7 +52,7 @@ fn prepare_path_name(node_name: &String) -> String {
 }
 
 impl Node {
-    fn new(path: String, name: String, parent: Option<Node>) -> Node {
+    fn new(name: String, parent: Option<&Node>) -> Node {
         let path_name = prepare_path_name(&name);
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
@@ -86,6 +86,33 @@ impl Node {
             updated: now,
             updates: 1,
         }
+    }
+    fn create(name: String, parent: Option<&Node>) -> Node {
+        let node = Node::new(name, parent);
+        let directory = Path::new("codex").join(&node.id);
+        let meta_toml = NodeMeta::from(&node).to_toml();
+        create_dir(&directory).unwrap();
+        let data = directory.join("_.md");
+        let metadata = directory.join("meta.toml");
+        let display = metadata.display();
+        let mut file = match File::create(metadata.as_path()) {
+            Err(why) => panic!("couldn't create {}: {}", display, why),
+            Ok(file) => file,
+        };
+        match file.write_all(meta_toml.as_str().as_bytes()) {
+            Err(why) => panic!("couldn't write to {}: {}", display, why),
+            Ok(_) => debug!("successfully wrote to {}", display),
+        }
+        let display = data.display();
+        let mut file = match File::create(data.as_path()) {
+            Err(why) => panic!("couldn't create {}: {}", display, why),
+            Ok(file) => file,
+        };
+        match file.write_all("".as_bytes()) {
+            Err(why) => panic!("couldn't write to {}: {}", display, why),
+            Ok(_) => debug!("successfully wrote to {}", display),
+        }
+        node
     }
     pub fn from_tree(
         id: PathBuf,
@@ -126,8 +153,10 @@ impl Node {
         }
         self.updated = now;
     }
-    pub fn create_child(&mut self) {
-        todo!();
+    pub fn create_child(&mut self, name: String) -> Node{
+        let child = Node::create(name, Some(&self));
+        self.children.push(child.id.clone());
+        child
     }
 }
 
@@ -206,8 +235,8 @@ impl NodeMeta {
     fn tag(&mut self, new_tag: String) {
         self.tags.push(new_tag);
     }
-    pub fn to_toml(node: NodeMeta) -> String {
-        toml::to_string_pretty(&node).unwrap()
+    pub fn to_toml(&self) -> String {
+        toml::to_string_pretty(self).unwrap()
     }
 }
 pub fn to_toml(node: NodeMeta) -> String {

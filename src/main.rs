@@ -14,17 +14,27 @@ use std::sync::Mutex;
 use tokio::time;
 mod node;
 mod tree;
+
 use node::{lay_foundation, Node};
+use nom::{
+    bytes::complete::{tag, take_till},
+    character::complete::char,
+    IResult,
+};
+use std::path::PathBuf;
 
 #[derive(Clone)]
 struct NeovimHandler {
     repo: Arc<Mutex<Repository>>,
     tree: Arc<Mutex<tree::Tree>>,
 }
-
+fn parse_name(input: &str) -> IResult<&str, &str> {
+    let (input, _) = char('"')(input)?;
+    take_till(|c| c == '"')(input)
+}
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     let yyyymmdd = Local::now().format("%Y%m%d");
-    
+
     match env::current_dir().unwrap().to_str() {
         Some(dir) => nvim.command(&format!("cd {}/codex", dir)).await.unwrap(),
         None => {}
@@ -78,6 +88,48 @@ impl Handler for NeovimHandler {
                         count += 1;
                     }
                 });
+            }
+            "create" => {
+                debug!("{:?}", _args);
+                let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
+                match args.as_slice() {
+                    &[Some(parent), Some(child)] => {
+                        let parent = PathBuf::from(parent);
+                        debug!("parent {:?} and child {:?}", parent, child);
+                        let tree = &mut *self.tree.lock().unwrap();
+                        let child_id = match tree.nodes.get_mut(&parent) {
+                            Some(parent) => {
+                                let child = parent.create_child(child.to_string());
+                                let child_id = child.id.clone();
+                                tree.nodes.insert(child.id.clone(), child);
+                                Some(child_id)
+                            }
+                            None => {
+                                error!("no node in tree named: {:?}", parent);
+                                None
+                            }
+                        };
+                        if let Some(id) = child_id {
+                            debug!(
+                                "parent in tree: {:?}",
+                                tree.nodes.get(id.clone().parent().unwrap())
+                            );
+                            debug!(
+                                "child in tree: {:?}",
+                                tree.nodes.get(&id)
+                            )
+                        }
+                    }
+                    &[Some(child)] => {
+                        debug!("single child {:?}", child);
+                        for c in child.chars() {
+                            debug!("{:?}", c);
+                        }
+                    }
+                    _ => {
+                        error!("invalid args to create: {:?}", _args);
+                    }
+                }
             }
             "stop" => {
                 tokio::spawn(async move {
@@ -140,7 +192,7 @@ async fn main() {
             }
             Err(e) => {
                 error!("tree ERROR! {:?}", e);
-                panic!("tree Error - PANIC");
+                panic!("tree Error - PANIC {:?}", e);
             }
         },
     ));

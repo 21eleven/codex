@@ -10,7 +10,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug)]
 pub struct Tree {
-    nodes: HashMap<NodeRef, Node>,
+    pub nodes: HashMap<NodeRef, Node>,
 }
 
 pub struct TreeError {
@@ -77,6 +77,9 @@ fn is_metadata_toml(entry: &DirEntry) -> bool {
 }
 
 pub fn new_sibling_id(path: &PathBuf) -> u64 {
+    // this has a bug
+    // returns 1 first time
+    // returns 0 every time after
     let search_dir = match path.parent() {
         Some(parent) => PathBuf::from("./codex/").join(parent),
         None => PathBuf::from("./codex/"),
