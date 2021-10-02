@@ -8,6 +8,8 @@ use std::fs::{self, create_dir, read_to_string, File};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+mod date_serde;
+use date_serde::codex_date_format;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -158,17 +160,16 @@ impl NodeMeta {
     pub fn from(node: &Node) -> NodeMeta {
         NodeMeta {
             name: node.name.clone(),
-            tags: node
-                .tags.clone()
-                .into_iter()
-                .collect(),
+            tags: node.tags.clone().into_iter().collect(),
             links: node
-                .links.clone()
+                .links
+                .clone()
                 .into_iter()
                 .map(|x| x.to_str().unwrap().to_owned())
                 .collect(),
             backlinks: node
-                .backlinks.clone()
+                .backlinks
+                .clone()
                 .into_iter()
                 .map(|x| x.to_str().unwrap().to_owned())
                 .collect(),
@@ -211,31 +212,6 @@ impl NodeMeta {
 }
 pub fn to_toml(node: NodeMeta) -> String {
     toml::to_string_pretty(&node).unwrap()
-}
-
-mod codex_date_format {
-    use chrono::{DateTime, Local, TimeZone};
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S%z"; // or `%:z`?
-
-    pub fn serialize<S>(date: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.format(FORMAT));
-        serializer.serialize_str(&s)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Local>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Local
-            .datetime_from_str(&s, FORMAT)
-            .map_err(serde::de::Error::custom)
-    }
 }
 
 pub fn lay_foundation() {
