@@ -1,4 +1,4 @@
-use crate::node::{Node, NodeRef, NodeMeta};
+use crate::node::{Node, NodeMeta, NodeRef};
 use log::*;
 use std::collections::{HashMap, HashSet};
 use std::error;
@@ -66,34 +66,22 @@ impl fmt::Debug for NodeFilesMissingError {
 
 impl error::Error for NodeFilesMissingError {}
 
-fn is_metadata_toml(entry: &DirEntry) -> bool {
-    debug!("{:?}", entry.clone());
-    entry
-        .clone()
-        .file_name()
-        .to_str()
-        .unwrap()
-        .ends_with("meta.toml")
-}
-
-pub fn new_sibling_id(path: &PathBuf) -> u64 {
-    // this has a bug
-    // returns 1 first time
-    // returns 0 every time after
+pub fn next_sibling_id(path: &PathBuf) -> u64 {
     let search_dir = match path.parent() {
         Some(parent) => PathBuf::from("./codex/").join(parent),
         None => PathBuf::from("./codex/"),
     };
-    WalkDir::new(search_dir)
+    // TODO: check search_dir exists?
+    let metas = WalkDir::new(search_dir)
         .sort_by_file_name()
         .contents_first(true)
-        .min_depth(1)
+        .min_depth(2)
         .max_depth(2)
         .into_iter()
-        .filter_entry(|e| is_metadata_toml(e))
         .map(|e| e.unwrap().into_path())
-        .collect::<Vec<PathBuf>>()
-        .len() as u64
+        .filter(|p| p.is_file() && p.ends_with("meta.toml"))
+        .collect::<Vec<PathBuf>>();
+    metas.len() as u64 + 1
 }
 
 impl Tree {
@@ -151,7 +139,6 @@ impl Tree {
                 None => {}
             }
         }
-        let mut file_check: HashSet<PathBuf> = HashSet::new();
         let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
         dfs(None, &mut node_map, None, vec![], Path::new(&root));
         debug!("{:?}", node_map);

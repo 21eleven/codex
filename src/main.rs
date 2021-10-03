@@ -4,6 +4,7 @@ use git2::Repository;
 use log::*;
 use nvim_rs::{compat::tokio::Compat, create::tokio as create, Handler, Neovim};
 use rmpv::Value;
+use tree::next_sibling_id;
 use std::default::Default;
 use std::env;
 use std::error::Error;
@@ -53,6 +54,7 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
         }
     });
 }
+
 
 #[async_trait]
 impl Handler for NeovimHandler {
@@ -129,6 +131,16 @@ impl Handler for NeovimHandler {
                     _ => {
                         error!("invalid args to create: {:?}", _args);
                     }
+                }
+            }
+            "test_sib" => {
+                let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
+                match args.as_slice() {
+                    &[Some(dir)] => {
+                        let id = next_sibling_id(&PathBuf::from(dir));
+                        debug!("SIB ID: {}", id);
+                    }
+                    _ => {}
                 }
             }
             "stop" => {

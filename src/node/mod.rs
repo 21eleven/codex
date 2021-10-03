@@ -1,4 +1,4 @@
-use crate::tree::{self, new_sibling_id};
+use crate::tree::{self, next_sibling_id};
 use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,7 @@ impl Node {
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
                 let path = parent_node.id.clone();
-                let sibling_num = new_sibling_id(&path);
+                let sibling_num = next_sibling_id(&path);
                 (
                     path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name))),
                     Some(parent_node.id.clone()),
@@ -65,7 +65,7 @@ impl Node {
             }
             None => {
                 let path = PathBuf::from("");
-                let sibling_num = new_sibling_id(&path);
+                let sibling_num = next_sibling_id(&path);
                 (
                     path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name))),
                     None,
@@ -153,7 +153,7 @@ impl Node {
         }
         self.updated = now;
     }
-    pub fn create_child(&mut self, name: String) -> Node{
+    pub fn create_child(&mut self, name: String) -> Node {
         let child = Node::create(name, Some(&self));
         self.children.push(child.id.clone());
         child
