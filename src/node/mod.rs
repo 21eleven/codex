@@ -1,4 +1,4 @@
-use crate::tree::{self, next_sibling_id};
+use crate::tree::{self, Tree, next_sibling_id};
 use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -57,11 +57,13 @@ impl Node {
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
                 let path = parent_node.id.clone();
-                let sibling_num = next_sibling_id(&path);
-                (
-                    path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name))),
-                    Some(parent_node.id.clone()),
-                )
+                let sibling_num = parent_node.children.len()+1;
+                // TODO: if id is a new order of magnitude then update
+                // the id of all other siblings to have an extra zero
+                // to pad the next decimal place
+                // eg "1" -> "01" using some `node.rename()` method
+                let node_path = path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name)));
+                (node_path, Some(parent_node.id.clone()))
             }
             None => {
                 let path = PathBuf::from("");

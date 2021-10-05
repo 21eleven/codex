@@ -1,5 +1,6 @@
 use crate::node::{Node, NodeMeta, NodeRef};
 use log::*;
+use nvim_rs::Value;
 use std::collections::{HashMap, HashSet};
 use std::error;
 use std::fmt;
@@ -67,6 +68,7 @@ impl fmt::Debug for NodeFilesMissingError {
 impl error::Error for NodeFilesMissingError {}
 
 pub fn next_sibling_id(path: &PathBuf) -> u64 {
+    // could be next root dir id
     let search_dir = match path.parent() {
         Some(parent) => PathBuf::from("./codex/").join(parent),
         None => PathBuf::from("./codex/"),
@@ -143,5 +145,39 @@ impl Tree {
         dfs(None, &mut node_map, None, vec![], Path::new(&root));
         debug!("{:?}", node_map);
         Ok(Tree { nodes: node_map })
+    }
+    pub fn create_node(&mut self, args: Vec<Value>) {
+        let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
+        match args.as_slice() {
+            &[Some(parent), Some(child)] => {
+                let parent = PathBuf::from(parent);
+                debug!("parent {:?} and child {:?}", parent, child);
+                let child = match self.nodes.get_mut(&parent) {
+                    Some(parent) => Some(parent.create_child(child.to_string())),
+                    None => {
+                        error!("no node in tree named: {:?}", parent);
+                        None
+                    }
+                };
+                if let Some(child) = child {
+                    let child_id = child.id.clone();
+                    self.nodes.insert(child.id.clone(), child);
+                    let parent_ref = child_id.parent().unwrap().to_path_buf();
+                    let siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
+                    for node_ref in &siblings {
+                        self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
+                    }
+                }
+            }
+            &[Some(child)] => {
+                debug!("single child {:?}", child);
+                for c in child.chars() {
+                    debug!("{:?}", c);
+                }
+            }
+            _ => {
+                error!("invalid args to create: {:?}", args);
+            }
+        }
     }
 }

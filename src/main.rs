@@ -4,12 +4,12 @@ use git2::Repository;
 use log::*;
 use nvim_rs::{compat::tokio::Compat, create::tokio as create, Handler, Neovim};
 use rmpv::Value;
-use tree::next_sibling_id;
 use std::default::Default;
 use std::env;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::io::Stdout;
+use tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use std::sync::Mutex;
 use tokio::time;
@@ -55,7 +55,6 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     });
 }
 
-
 #[async_trait]
 impl Handler for NeovimHandler {
     type Writer = Compat<Stdout>;
@@ -93,44 +92,21 @@ impl Handler for NeovimHandler {
             }
             "create" => {
                 debug!("{:?}", _args);
+                let tree = &mut *self.tree.lock().unwrap();
+                tree.create_node(_args);
+            }
+            "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
+                let tree = &*self.tree.lock().unwrap();
                 match args.as_slice() {
-                    &[Some(parent), Some(child)] => {
-                        let parent = PathBuf::from(parent);
-                        debug!("parent {:?} and child {:?}", parent, child);
-                        let tree = &mut *self.tree.lock().unwrap();
-                        let child_id = match tree.nodes.get_mut(&parent) {
-                            Some(parent) => {
-                                let child = parent.create_child(child.to_string());
-                                let child_id = child.id.clone();
-                                tree.nodes.insert(child.id.clone(), child);
-                                Some(child_id)
-                            }
-                            None => {
-                                error!("no node in tree named: {:?}", parent);
-                                None
-                            }
-                        };
-                        if let Some(id) = child_id {
-                            debug!(
-                                "parent in tree: {:?}",
-                                tree.nodes.get(id.clone().parent().unwrap())
-                            );
-                            debug!(
-                                "child in tree: {:?}",
-                                tree.nodes.get(&id)
-                            )
-                        }
+                    &[Some(node_ref)] => {
+                        debug!(
+                            "{:?}: {:?}",
+                            node_ref,
+                            tree.nodes.get(&PathBuf::from(&node_ref)).unwrap()
+                        );
                     }
-                    &[Some(child)] => {
-                        debug!("single child {:?}", child);
-                        for c in child.chars() {
-                            debug!("{:?}", c);
-                        }
-                    }
-                    _ => {
-                        error!("invalid args to create: {:?}", _args);
-                    }
+                    _ => {}
                 }
             }
             "test_sib" => {
@@ -196,7 +172,7 @@ async fn main() {
             Repository::init("./").unwrap()
         }
     }));
-    let tree = Arc::new(Mutex::new(
+   let tree = Arc::new(Mutex::new(
         match tree::Tree::build("./codex/".to_string()) {
             Ok(tree) => {
                 debug!("tree gud!");
