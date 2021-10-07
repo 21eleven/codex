@@ -69,7 +69,7 @@ impl Node {
                 let path = PathBuf::from("");
                 let sibling_num = next_sibling_id(&path);
                 (
-                    path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name))),
+                    path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name))),
                     None,
                 )
             }
@@ -89,7 +89,7 @@ impl Node {
             updates: 1,
         }
     }
-    fn create(name: String, parent: Option<&Node>) -> Node {
+    pub fn create(name: String, parent: Option<&Node>) -> Node {
         let node = Node::new(name, parent);
         let directory = Path::new("codex").join(&node.id);
         let meta_toml = NodeMeta::from(&node).to_toml();

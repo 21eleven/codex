@@ -1,5 +1,7 @@
 use crate::node::{Node, NodeMeta, NodeRef};
 use log::*;
+use nom::bytes::complete::{tag, take_till};
+use nom::IResult;
 use nvim_rs::Value;
 use std::collections::{HashMap, HashSet};
 use std::error;
@@ -147,6 +149,7 @@ impl Tree {
         Ok(Tree { nodes: node_map })
     }
     pub fn create_node(&mut self, args: Vec<Value>) {
+        // TODO: what would happen if the input had a '/'? sanatize
         let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
         match args.as_slice() {
             &[Some(parent), Some(child)] => {
@@ -169,10 +172,38 @@ impl Tree {
                     }
                 }
             }
-            &[Some(child)] => {
-                debug!("single child {:?}", child);
-                for c in child.chars() {
-                    debug!("{:?}", c);
+            &[Some(node_name)] => {
+                // TODO what is the right way to remove this hard coding?
+                // 'static or const?
+                let root = PathBuf::from("./codex");
+                fn parse_name(input: &str) -> IResult<&str, &str> {
+                    let (input, _) = tag("./codex/")(input)?;
+                    take_till(|c| c == '/')(input)
+                }
+                let mut siblings = WalkDir::new(root)
+                    .sort_by_file_name()
+                    .contents_first(true)
+                    .min_depth(2)
+                    .max_depth(2)
+                    .into_iter()
+                    .map(|e| e.unwrap().into_path())
+                    .filter(|p| p.is_file() && p.ends_with("meta.toml"))
+                    .map(|p| {
+                        parse_name(p.as_path().to_str().unwrap())
+                            .unwrap()
+                            .1
+                            .to_string()
+                    })
+                    .map(|s| PathBuf::from(s))
+                    .collect::<Vec<PathBuf>>();
+                debug!("{:?}", siblings);
+                let mut node = Node::create(node_name.to_string(), None);
+                siblings.push(node.id.clone());
+                node.siblings = siblings.clone();
+                self.nodes.insert(node.id.clone(), node);
+                debug!("{:?}", siblings);
+                for node_ref in &siblings {
+                    self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
                 }
             }
             _ => {
