@@ -16,6 +16,19 @@ pub struct Tree {
     pub nodes: HashMap<NodeRef, Node>,
 }
 
+impl fmt::Display for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Tree(\n")?;
+        let mut keys: Vec<PathBuf> = self.nodes.keys().map(|p| p.to_owned()).collect();
+        keys.sort_unstable();
+        for id in keys {
+            write!(f, "\t {}\n", id.to_str().unwrap_or("error"))?;
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
 pub struct TreeError {
     err_text: String,
 }
@@ -137,7 +150,7 @@ impl Tree {
                     debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
                     let node = Node::from_tree(namepath, &meta_path, parent, siblings, children);
-                    debug!("{:?}", &node);
+                    debug!("{}", &node);
                     node_map.insert(node.id.clone(), node);
                 }
                 None => {}
@@ -145,7 +158,6 @@ impl Tree {
         }
         let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
         dfs(None, &mut node_map, None, vec![], Path::new(&root));
-        debug!("{:?}", node_map);
         Ok(Tree { nodes: node_map })
     }
     pub fn create_node(&mut self, args: Vec<Value>) {

@@ -51,7 +51,7 @@ impl Handler for NeovimHandler {
             "start" => {
                 log::debug!("starting CODEX!");
                 log::debug!("{:?}", self.repo.lock().unwrap().state());
-                log::debug!("tree on startup: {:?}", self.tree.lock().unwrap());
+                log::debug!("tree on startup: {}", self.tree.lock().unwrap());
                 on_start(neovim).await;
             }
             "ping" => {
