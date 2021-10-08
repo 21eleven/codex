@@ -88,7 +88,7 @@ impl Handler for NeovimHandler {
                 match args.as_slice() {
                     &[Some(node_ref)] => {
                         debug!(
-                            "{:?}: {:?}",
+                            "{:?}: {}",
                             node_ref,
                             tree.nodes.get(&PathBuf::from(&node_ref)).unwrap()
                         );

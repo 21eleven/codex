@@ -10,6 +10,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
 use date_serde::codex_date_format;
+use std::fmt;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -39,7 +40,24 @@ pub struct Node {
     pub updated: DateTime<Local>,
     pub updates: u64,
 }
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Node({}): {{\n", self.name)?;
+        write!(f,"\t id: {}\n", self.id.to_str().unwrap())?;
+        write!(f,"\t parent: {}\n", match &self.parent {
+            Some(parent) => parent.to_str().unwrap(),
+            None => "None" 
+        })?;
+        write!(f, "\t siblings: {:?}\n", self.siblings)?;
+        write!(f, "\t children: {:?}\n", self.children)?;
+        write!(f, "\t links: {:?}\n", self.links)?;
+        write!(f, "\t backlinks: {:?}\n", self.backlinks)?;
+        write!(f, "\t tags: {:?}\n", self.tags)?;
+        write!(f,"}}\n")?;
+        Ok(())
+    }
 
+}
 fn prepare_path_name(node_name: &String) -> String {
     node_name
         .to_ascii_lowercase()
