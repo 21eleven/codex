@@ -1,152 +1,18 @@
-use async_trait::async_trait;
-use chrono::Local;
 use git2::Repository;
 use log::*;
-use nvim_rs::{compat::tokio::Compat, create::tokio as create, Handler, Neovim};
-use rmpv::Value;
+use nvim_rs::create::tokio as create;
 use std::default::Default;
 use std::env;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::io::Stdout;
-use tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use std::sync::Mutex;
-use tokio::time;
 mod node;
+mod nvim;
 mod tree;
 
-use node::{lay_foundation, Node};
-use nom::{
-    bytes::complete::{tag, take_till},
-    character::complete::char,
-    IResult,
-};
-use std::path::PathBuf;
-
-#[derive(Clone)]
-struct NeovimHandler {
-    repo: Arc<Mutex<Repository>>,
-    tree: Arc<Mutex<tree::Tree>>,
-}
-fn parse_name(input: &str) -> IResult<&str, &str> {
-    let (input, _) = char('"')(input)?;
-    take_till(|c| c == '"')(input)
-}
-async fn on_start(nvim: Neovim<Compat<Stdout>>) {
-    let yyyymmdd = Local::now().format("%Y%m%d");
-
-    match env::current_dir().unwrap().to_str() {
-        Some(dir) => nvim.command(&format!("cd {}/codex", dir)).await.unwrap(),
-        None => {}
-    }
-    nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
-    tokio::spawn(async move {
-        let mut interval = time::interval(time::Duration::from_millis(250));
-        let welcome = "C O D E X 📖".to_string();
-        for idx in 1..welcome.len() {
-            let s = format!(
-                "lua print(\"{}\")",
-                welcome.chars().take(idx).collect::<String>()
-            );
-            interval.tick().await;
-            nvim.command(&s).await.unwrap();
-        }
-    });
-}
-
-#[async_trait]
-impl Handler for NeovimHandler {
-    type Writer = Compat<Stdout>;
-
-    async fn handle_notify(&self, name: String, _args: Vec<Value>, neovim: Neovim<Compat<Stdout>>) {
-        match name.as_ref() {
-            "start" => {
-                log::debug!("starting CODEX!");
-                log::debug!("{:?}", self.repo.lock().unwrap().state());
-                log::debug!("tree on startup: {:?}", self.tree.lock().unwrap());
-                on_start(neovim).await;
-            }
-            "ping" => {
-                let args_s = format!("{:?}", _args);
-                let s = format!("lua print(\"hello pong {}\")", args_s.replace('"', "\\\""));
-                neovim.command(s.as_str()).await.unwrap();
-            }
-            "repeat" => {
-                let mut count = 0;
-                tokio::spawn(async move {
-                    let mut interval = time::interval(time::Duration::from_secs(3));
-                    loop {
-                        interval.tick().await;
-                        let args_s = format!("{:?}", _args);
-                        let s = format!(
-                            "lua print(\"hello repeat {} {}\")",
-                            count,
-                            args_s.replace('"', "\\\"")
-                        );
-                        neovim.command(s.as_str()).await.unwrap();
-                        dbg!(count);
-                        count += 1;
-                    }
-                });
-            }
-            "create" => {
-                debug!("{:?}", _args);
-                let tree = &mut *self.tree.lock().unwrap();
-                tree.create_node(_args);
-            }
-            "node" => {
-                let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
-                let tree = &*self.tree.lock().unwrap();
-                match args.as_slice() {
-                    &[Some(node_ref)] => {
-                        debug!(
-                            "{:?}: {:?}",
-                            node_ref,
-                            tree.nodes.get(&PathBuf::from(&node_ref)).unwrap()
-                        );
-                    }
-                    _ => {}
-                }
-            }
-            "test_sib" => {
-                let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
-                match args.as_slice() {
-                    &[Some(dir)] => {
-                        let id = next_sibling_id(&PathBuf::from(dir));
-                        debug!("SIB ID: {}", id);
-                    }
-                    _ => {}
-                }
-            }
-            "stop" => {
-                tokio::spawn(async move {
-                    let mut interval = time::interval(time::Duration::from_secs(3));
-                    interval.tick().await;
-                    debug!("woke up, closing");
-                });
-            }
-            _ => {}
-        }
-    }
-    async fn handle_request(
-        &self,
-        name: String,
-        _args: Vec<Value>,
-        _neovim: Neovim<Compat<Stdout>>,
-    ) -> Result<Value, Value> {
-        debug!("in request handler");
-        match name.as_str() {
-            // "stop" => {
-            //     let mut interval = time::interval(time::Duration::from_secs(3));
-            //     interval.tick().await;
-            //     debug!("woke up, closing");
-            //     Ok(Value::Nil)
-            // }
-            _ => Ok(Value::Nil),
-        }
-    }
-}
+use node::lay_foundation;
+use nvim::NeovimHandler;
 
 #[tokio::main]
 async fn main() {
@@ -172,7 +38,7 @@ async fn main() {
             Repository::init("./").unwrap()
         }
     }));
-   let tree = Arc::new(Mutex::new(
+    let tree = Arc::new(Mutex::new(
         match tree::Tree::build("./codex/".to_string()) {
             Ok(tree) => {
                 debug!("tree gud!");

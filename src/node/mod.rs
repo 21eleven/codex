@@ -90,6 +90,7 @@ impl Node {
         }
     }
     pub fn create(name: String, parent: Option<&Node>) -> Node {
+        // what if directory already exists?
         let node = Node::new(name, parent);
         let directory = Path::new("codex").join(&node.id);
         let meta_toml = NodeMeta::from(&node).to_toml();
