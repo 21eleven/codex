@@ -8,6 +8,7 @@ use crate::tree;
 use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
+use crate::node::power_of_ten;
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -94,6 +95,19 @@ impl Handler for NeovimHandler {
                         );
                     }
                     _ => {}
+                }
+            }
+            "pow" => {
+                debug!("{:?}", _args);
+                let arg: Vec<u64> = _args
+                    .iter()
+                    .map(|arg| arg.as_str().unwrap_or(""))
+                    .flat_map(|e| e.parse::<u64>())
+                    .collect();
+                debug!("{:?}", arg);
+                match arg.as_slice() {
+                    &[n] => debug!("{}: pow? {:?}", n, power_of_ten(n)),
+                    _ => debug!("supply a single u64 for pow"),
                 }
             }
             "test_sib" => {

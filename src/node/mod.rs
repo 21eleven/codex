@@ -22,6 +22,22 @@ pub enum Entry {
     Todo,
 }
 
+pub fn power_of_ten(mut n: u64) -> Option<u64> {
+    let mut pow = 1;
+    let mut r = 0;
+    loop {
+        if r > 0 || n == 0 {
+            return None
+        } else if n == 10 {
+            return Some(pow)
+        } else {
+            pow += 1;
+            r = n % 10;
+            n /= 10;
+        }
+    }
+}
+
 type Entity = Box<Node>;
 
 pub type NodeRef = PathBuf;
