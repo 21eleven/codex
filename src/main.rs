@@ -11,7 +11,7 @@ mod node;
 mod nvim;
 mod tree;
 
-use node::lay_foundation;
+use node::init_codex_repo;
 use nvim::NeovimHandler;
 
 #[tokio::main]
@@ -34,8 +34,9 @@ async fn main() {
     let repo = Arc::new(Mutex::new(match Repository::open("./") {
         Ok(repo) => repo,
         Err(_) => {
-            lay_foundation();
-            Repository::init("./").unwrap()
+            // lay foundation needs to interact w
+            // git add and commit the initial nodes
+            init_codex_repo()
         }
     }));
     let tree = Arc::new(Mutex::new(

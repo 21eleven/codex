@@ -4,13 +4,14 @@ use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::convert::TryInto;
-use std::fs::{self, create_dir, read_to_string, File};
+use std::fs::{self, create_dir, read_to_string, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
 use date_serde::codex_date_format;
 use std::fmt;
+use git2::Repository;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -42,7 +43,7 @@ type Entity = Box<Node>;
 
 pub type NodeRef = PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     pub id: NodeRef,
     pub name: String,
@@ -149,6 +150,7 @@ impl Node {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => debug!("successfully wrote to {}", display),
         }
+        // git add, commit here? here?
         node
     }
     pub fn from_tree(
@@ -177,10 +179,32 @@ impl Node {
             updates,
         }
     }
-    pub fn write(&mut self) {
-        self.tick_update();
-
+    pub fn rerank(&mut self, rank: u64) {
         todo!();
+    }
+    pub fn mv(&mut self, new_path: NodeRef) { // should probably return a result
+        // primitive fn for moving across fs
+        // should be a git move
+        self.id = new_path;
+        todo!();
+    }
+    pub fn update(&mut self) {
+        self.tick_update();
+        self.write()
+    }
+    pub fn write(&mut self) {
+        todo!();
+    }
+    pub fn write_meta(&self) {
+        let metadata = Path::new("codex").join(&self.id).join("meta.toml");
+        let meta_toml = NodeMeta::from(&self).to_toml();
+        let display = metadata.display();
+        let mut metadata = OpenOptions::new().write(true).truncate(true).open(metadata.as_path()).unwrap();
+        match metadata.write_all(meta_toml.as_str().as_bytes()) {
+            Err(why) => panic!("couldn't write to {}: {}", display, why),
+            Ok(_) => debug!("successfully wrote to {}", display),
+        }
+
     }
     pub fn tick_update(&mut self) {
         let now = Local::now();
@@ -194,6 +218,9 @@ impl Node {
         let child = Node::create(name, Some(&self));
         self.children.push(child.id.clone());
         child
+    }
+    fn tag(&mut self, new_tag: String) {
+        self.tags.insert(new_tag);
     }
 }
 
@@ -269,9 +296,6 @@ impl NodeMeta {
             self.updates,
         )
     }
-    fn tag(&mut self, new_tag: String) {
-        self.tags.push(new_tag);
-    }
     pub fn to_toml(&self) -> String {
         toml::to_string_pretty(self).unwrap()
     }
@@ -280,32 +304,12 @@ pub fn to_toml(node: NodeMeta) -> String {
     toml::to_string_pretty(&node).unwrap()
 }
 
-pub fn lay_foundation() {
-    fs::create_dir("./codex").unwrap();
-    let mut journal: NodeMeta = NodeMeta::new("journal".to_string());
-    journal.tag("journal".to_string());
-    let journal_root_path = Path::new("codex/1-journal");
-    create_dir(journal_root_path).unwrap();
-    let data = journal_root_path.join("_.md");
-    let metadata = journal_root_path.join("meta.toml");
-    let display = journal_root_path.display();
-    let mut file = match File::create(metadata.as_path()) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-    let journal_toml = to_toml(journal);
-
-    match file.write_all(journal_toml.as_str().as_bytes()) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(_) => debug!("successfully wrote to {}", display),
-    }
-
-    let mut file = match File::create(data.as_path()) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-    match file.write_all("".as_bytes()) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(_) => debug!("successfully wrote to {}", display),
-    }
+pub fn init_codex_repo() -> Repository {
+    fs::create_dir(CODEX_ROOT).unwrap();
+    let repo = Repository::init("./").unwrap();
+    let mut journal = Node::create("journal".to_string(), None);
+    journal.tag(String::from("journal"));
+    journal.write_meta();
+    debug!("created journal: {}", journal);
+    repo
 }
