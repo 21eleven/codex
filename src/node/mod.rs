@@ -1,4 +1,4 @@
-use crate::tree::{self, Tree, next_sibling_id};
+use crate::tree::{self, next_sibling_id, Tree};
 use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -10,8 +10,8 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
 use date_serde::codex_date_format;
+use git2::{Commit, ObjectType, Repository};
 use std::fmt;
-use git2::Repository;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -28,9 +28,9 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     let mut r = 0;
     loop {
         if r > 0 || n == 0 {
-            return None
+            return None;
         } else if n == 10 {
-            return Some(pow)
+            return Some(pow);
         } else {
             pow += 1;
             r = n % 10;
@@ -60,20 +60,23 @@ pub struct Node {
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Node({}): {{\n", self.name)?;
-        write!(f,"\t id: {}\n", self.id.to_str().unwrap())?;
-        write!(f,"\t parent: {}\n", match &self.parent {
-            Some(parent) => parent.to_str().unwrap(),
-            None => "None" 
-        })?;
+        write!(f, "\t id: {}\n", self.id.to_str().unwrap())?;
+        write!(
+            f,
+            "\t parent: {}\n",
+            match &self.parent {
+                Some(parent) => parent.to_str().unwrap(),
+                None => "None",
+            }
+        )?;
         write!(f, "\t siblings: {:?}\n", self.siblings)?;
         write!(f, "\t children: {:?}\n", self.children)?;
         write!(f, "\t links: {:?}\n", self.links)?;
         write!(f, "\t backlinks: {:?}\n", self.backlinks)?;
         write!(f, "\t tags: {:?}\n", self.tags)?;
-        write!(f,"}}\n")?;
+        write!(f, "}}\n")?;
         Ok(())
     }
-
 }
 fn prepare_path_name(node_name: &String) -> String {
     node_name
@@ -92,7 +95,7 @@ impl Node {
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
                 let path = parent_node.id.clone();
-                let sibling_num = parent_node.children.len()+1;
+                let sibling_num = parent_node.children.len() + 1;
                 // TODO: if id is a new order of magnitude then update
                 // the id of all other siblings to have an extra zero
                 // to pad the next decimal place
@@ -150,7 +153,6 @@ impl Node {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => debug!("successfully wrote to {}", display),
         }
-        // git add, commit here? here?
         node
     }
     pub fn from_tree(
@@ -182,7 +184,8 @@ impl Node {
     pub fn rerank(&mut self, rank: u64) {
         todo!();
     }
-    pub fn mv(&mut self, new_path: NodeRef) { // should probably return a result
+    pub fn mv(&mut self, new_path: NodeRef) {
+        // should probably return a result
         // primitive fn for moving across fs
         // should be a git move
         self.id = new_path;
@@ -199,12 +202,15 @@ impl Node {
         let metadata = Path::new("codex").join(&self.id).join("meta.toml");
         let meta_toml = NodeMeta::from(&self).to_toml();
         let display = metadata.display();
-        let mut metadata = OpenOptions::new().write(true).truncate(true).open(metadata.as_path()).unwrap();
-        match metadata.write_all(meta_toml.as_str().as_bytes()) {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(metadata.as_path())
+            .unwrap();
+        match file.write_all(meta_toml.as_str().as_bytes()) {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => debug!("successfully wrote to {}", display),
         }
-
     }
     pub fn tick_update(&mut self) {
         let now = Local::now();
@@ -300,9 +306,6 @@ impl NodeMeta {
         toml::to_string_pretty(self).unwrap()
     }
 }
-pub fn to_toml(node: NodeMeta) -> String {
-    toml::to_string_pretty(&node).unwrap()
-}
 
 pub fn init_codex_repo() -> Repository {
     fs::create_dir(CODEX_ROOT).unwrap();
@@ -310,6 +313,41 @@ pub fn init_codex_repo() -> Repository {
     let mut journal = Node::create("journal".to_string(), None);
     journal.tag(String::from("journal"));
     journal.write_meta();
+    let base_path = Path::new("codex").join(&journal.id);
+    let meta_path = base_path.clone().join("meta.toml");
+    let data_path = base_path.join("_.md");
+    // git commit -m "codex init"
     debug!("created journal: {}", journal);
+    let sig = repo.signature().unwrap();
+
+    fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
+        let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
+        obj.into_commit()
+            .map_err(|_| git2::Error::from_str("Couldn't find commit"))
+    }
+    let mut index = repo.index().unwrap();
+    // index.add_path(&meta_path).unwrap();
+    // index.add_path(&data_path).unwrap();
+    index.add_all(vec!["codex/*"], git2::IndexAddOption::DEFAULT, None ).unwrap();
+    index.write().unwrap();
+    let oid = index.write_tree().unwrap();
+    {
+        // let headoid = repo.refname_to_id("HEAD").unwrap();
+        // let parent_commit = repo.find_commit(headoid).unwrap();
+        // let parents = vec![&parent_commit];       
+        // let parent_commit = find_last_commit(&repo).unwrap();
+        let tree = repo.find_tree(oid).unwrap();
+        repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "codex init",
+            &tree,
+            &[],
+            // &parents,
+            // &[&parent_commit],
+        )
+        .unwrap();
+    }
     repo
 }
