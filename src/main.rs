@@ -10,6 +10,7 @@ use std::sync::Mutex;
 mod node;
 mod nvim;
 mod tree;
+mod utils;
 
 use node::init_codex_repo;
 use nvim::NeovimHandler;

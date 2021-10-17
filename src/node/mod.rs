@@ -9,8 +9,9 @@ use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
+use crate::utils::commit_paths;
 use date_serde::codex_date_format;
-use git2::{Commit, ObjectType, Repository};
+use git2::Repository;
 use std::fmt;
 
 // type Datetime = DateTime<Local>;
@@ -313,41 +314,8 @@ pub fn init_codex_repo() -> Repository {
     let mut journal = Node::create("journal".to_string(), None);
     journal.tag(String::from("journal"));
     journal.write_meta();
-    let base_path = Path::new("codex").join(&journal.id);
-    let meta_path = base_path.clone().join("meta.toml");
-    let data_path = base_path.join("_.md");
-    // git commit -m "codex init"
     debug!("created journal: {}", journal);
-    let sig = repo.signature().unwrap();
-
-    fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
-        let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
-        obj.into_commit()
-            .map_err(|_| git2::Error::from_str("Couldn't find commit"))
-    }
-    let mut index = repo.index().unwrap();
-    // index.add_path(&meta_path).unwrap();
-    // index.add_path(&data_path).unwrap();
-    index.add_all(vec!["codex/*"], git2::IndexAddOption::DEFAULT, None ).unwrap();
-    index.write().unwrap();
-    let oid = index.write_tree().unwrap();
-    {
-        // let headoid = repo.refname_to_id("HEAD").unwrap();
-        // let parent_commit = repo.find_commit(headoid).unwrap();
-        // let parents = vec![&parent_commit];       
-        // let parent_commit = find_last_commit(&repo).unwrap();
-        let tree = repo.find_tree(oid).unwrap();
-        repo.commit(
-            Some("HEAD"),
-            &sig,
-            &sig,
-            "codex init",
-            &tree,
-            &[],
-            // &parents,
-            // &[&parent_commit],
-        )
-        .unwrap();
-    }
+    commit_paths(&repo, vec![&Path::new("codex/*")], "codex init").unwrap();
+    debug!("codex git repo initialized");
     repo
 }
