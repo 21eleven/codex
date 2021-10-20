@@ -51,8 +51,8 @@ pub struct Node {
     pub parent: Option<NodeRef>,
     pub siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
     pub children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
-    pub links: Vec<NodeRef>,
-    pub backlinks: Vec<NodeRef>,
+    pub links: HashSet<NodeRef>,
+    pub backlinks: HashSet<NodeRef>,
     pub tags: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
@@ -101,7 +101,7 @@ impl Node {
                 // the id of all other siblings to have an extra zero
                 // to pad the next decimal place
                 // eg "1" -> "01" using some `node.rename()` method
-                let node_path = path.join(PathBuf::from(format!("{}-{}/", sibling_num, path_name)));
+                let node_path = path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name)));
                 (node_path, Some(parent_node.id.clone()))
             }
             None => {
@@ -120,8 +120,8 @@ impl Node {
             parent: parent_option,
             siblings: vec![],
             children: vec![],
-            links: vec![],
-            backlinks: vec![],
+            links: HashSet::new(),
+            backlinks: HashSet::new(),
             tags: HashSet::new(),
             created: now,
             updated: now,
@@ -192,6 +192,24 @@ impl Node {
         self.id = new_path;
         todo!();
     }
+    pub fn rename_link(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+        // TODO rename all instances of the link in the content file
+        // for i in 0..self.links.len() {
+        // should links be a hashset?
+        // if self.links[i] == *old_name {
+        // self.links[i] = new_name.clone().to_path_buf();
+        // break
+        // }
+        // }
+        self.links.remove(old_name);
+        self.links.insert(new_name.to_path_buf());
+        self.write_meta();
+    }
+    pub fn rename_backlink(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+        self.backlinks.remove(old_name);
+        self.backlinks.insert(new_name.to_path_buf());
+        self.write_meta();
+    }
     pub fn update(&mut self) {
         self.tick_update();
         self.write()
@@ -258,21 +276,27 @@ impl NodeMeta {
         }
     }
     pub fn from(node: &Node) -> NodeMeta {
+        let mut tags: Vec<String> = node.tags.clone().into_iter().collect();
+        tags.sort_unstable();
+        let mut links: Vec<String> = node
+            .links
+            .clone()
+            .into_iter()
+            .map(|x| x.to_str().unwrap().to_owned())
+            .collect();
+        links.sort_unstable();
+        let mut backlinks: Vec<String> = node
+            .backlinks
+            .clone()
+            .into_iter()
+            .map(|x| x.to_str().unwrap().to_owned())
+            .collect();
+        backlinks.sort_unstable();
         NodeMeta {
             name: node.name.clone(),
-            tags: node.tags.clone().into_iter().collect(),
-            links: node
-                .links
-                .clone()
-                .into_iter()
-                .map(|x| x.to_str().unwrap().to_owned())
-                .collect(),
-            backlinks: node
-                .backlinks
-                .clone()
-                .into_iter()
-                .map(|x| x.to_str().unwrap().to_owned())
-                .collect(),
+            tags,
+            links,
+            backlinks,
             created: node.created,
             updated: node.updated,
             updates: node.updates,

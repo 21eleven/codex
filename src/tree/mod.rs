@@ -1,4 +1,5 @@
-use crate::node::{Node, NodeMeta, NodeRef};
+use crate::node::{power_of_ten, Node, NodeMeta, NodeRef};
+use git2::Repository;
 use log::*;
 use nom::bytes::complete::{tag, take_till};
 use nom::IResult;
@@ -101,6 +102,17 @@ pub fn next_sibling_id(path: &PathBuf) -> u64 {
     metas.len() as u64 + 1
 }
 
+fn get_node_ref_number(node_ref: &NodeRef) -> u64 {
+    let (_base, node) = node_ref
+        .as_path()
+        .to_str()
+        .unwrap()
+        .rsplit_once('/')
+        .unwrap();
+    let (x, _name_path) = node.split_once('-').unwrap();
+    x.parse::<u64>().unwrap()
+}
+
 impl Tree {
     pub fn build(root: String) -> Result<Tree> {
         fn dfs(
@@ -178,7 +190,58 @@ impl Tree {
                     let child_id = child.id.clone();
                     self.nodes.insert(child.id.clone(), child);
                     let parent_ref = child_id.parent().unwrap().to_path_buf();
-                    let siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
+                    let mut siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
+                    match power_of_ten(get_node_ref_number(&child_id)) {
+                        Some(n) => {
+                            // child id is ok
+                            // but sibs need a rename
+                            // for sib in sibs
+                            //    newid = calc_new_id(sib)
+                            //    move struct to newid key
+                            //    struct.rename(newid)
+                            let repo = Repository::open("./").unwrap();
+                            let mut moves: Vec<(NodeRef, NodeRef)> = vec![];
+                            for idx in 0..siblings.len() {
+                                if &siblings[idx] == &child_id {
+                                    continue;
+                                }
+                                let sibid = &siblings[idx].clone();
+                                // TODO make this a function -> (u64, &str)
+                                let (base, node) =
+                                    sibid.as_path().to_str().unwrap().rsplit_once('/').unwrap();
+                                let (x, name_path) = node.split_once('-').unwrap();
+                                let x = x.parse::<u64>().unwrap();
+                                let newid = PathBuf::from(format!(
+                                    "{}/{:0width$}-{}",
+                                    base,
+                                    x,
+                                    name_path,
+                                    width = (n as usize) + 1
+                                ));
+                                siblings[idx] = newid.clone();
+                                let mut node_clone = self.nodes.remove(sibid).unwrap();
+                                // let mut node_clone = self.nodes.remove(sibid.clone()).unwrap();
+                                // should be a git move
+                                node_clone.mv(newid.clone());
+                                // link is another node
+                                // that this node points to in its content
+                                for link in &node_clone.links {
+                                    let linked = self.nodes.get_mut(link).unwrap();
+                                    linked.rename_backlink(&sibid, &newid);
+                                }
+                                // a backlink is a node that has a link
+                                // in its content that points to this node
+                                for backlink in &node_clone.backlinks {
+                                    let backlinked = self.nodes.get_mut(backlink).unwrap();
+                                    backlinked.rename_link(&sibid, &newid);
+                                }
+                                // WHAT ABOUT THE CHILDREN???
+                                self.nodes.insert(newid, node_clone);
+                            }
+                            //git commit here
+                        }
+                        None => {}
+                    }
                     for node_ref in &siblings {
                         self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
                     }
