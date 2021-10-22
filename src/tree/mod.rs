@@ -221,6 +221,7 @@ impl Tree {
                                 siblings[idx] = newid.clone();
                                 let mut node_clone = self.nodes.remove(sibid).unwrap();
                                 // let mut node_clone = self.nodes.remove(sibid.clone()).unwrap();
+                                //
                                 // should be a git move
                                 node_clone.mv(newid.clone());
                                 // link is another node
@@ -236,6 +237,46 @@ impl Tree {
                                     backlinked.rename_link(&sibid, &newid);
                                 }
                                 // WHAT ABOUT THE CHILDREN???
+                                fn rename_dfs(
+                                    node_ref: &NodeRef,
+                                    parent: &NodeRef,
+                                    map: &mut HashMap<NodeRef, Node>,
+                                ) -> NodeRef {
+                                    let mut node = map.remove(node_ref).unwrap();
+                                    let (_, node_name) = node_ref
+                                        .as_path()
+                                        .to_str()
+                                        .unwrap()
+                                        .rsplit_once('/')
+                                        .unwrap();
+                                    let newid = PathBuf::from(format!(
+                                        "{}/{}",
+                                        parent.to_str().unwrap(),
+                                        node_name,
+                                    ));
+                                    for link in &node.links {
+                                        let linked = map.get_mut(link).unwrap();
+                                        linked.rename_backlink(&node_ref, &newid);
+                                    }
+                                    for backlink in &node.backlinks {
+                                        let backlinked = map.get_mut(backlink).unwrap();
+                                        backlinked.rename_link(&node_ref, &newid);
+                                    }
+                                    node.parent = Some(parent.to_path_buf());
+                                    node.id = newid.clone();
+                                    node.children = node
+                                        .children
+                                        .iter()
+                                        .map(|child_ref| rename_dfs(child_ref, &newid, map))
+                                        .collect();
+                                    map.insert(newid.clone(), node);
+                                    newid
+                                }
+                                node_clone.children = node_clone
+                                    .children
+                                    .iter()
+                                    .map(|child_ref| rename_dfs(child_ref, &newid, &mut self.nodes))
+                                    .collect();
                                 self.nodes.insert(newid, node_clone);
                             }
                             //git commit here
