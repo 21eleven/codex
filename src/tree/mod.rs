@@ -1,4 +1,5 @@
 use crate::node::{power_of_ten, Node, NodeMeta, NodeRef};
+use crate::utils::commit_paths;
 use git2::Repository;
 use log::*;
 use nom::bytes::complete::{tag, take_till};
@@ -7,6 +8,7 @@ use nvim_rs::Value;
 use std::collections::{HashMap, HashSet};
 use std::error;
 use std::fmt;
+use std::fs::rename;
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
 
@@ -193,14 +195,8 @@ impl Tree {
                     let mut siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
                     match power_of_ten(get_node_ref_number(&child_id)) {
                         Some(n) => {
-                            // child id is ok
-                            // but sibs need a rename
-                            // for sib in sibs
-                            //    newid = calc_new_id(sib)
-                            //    move struct to newid key
-                            //    struct.rename(newid)
+                            // TODO make this section more DRY
                             let repo = Repository::open("./").unwrap();
-                            let mut moves: Vec<(NodeRef, NodeRef)> = vec![];
                             for idx in 0..siblings.len() {
                                 if &siblings[idx] == &child_id {
                                     continue;
@@ -220,10 +216,9 @@ impl Tree {
                                 ));
                                 siblings[idx] = newid.clone();
                                 let mut node_clone = self.nodes.remove(sibid).unwrap();
-                                // let mut node_clone = self.nodes.remove(sibid.clone()).unwrap();
-                                //
-                                // should be a git move
-                                node_clone.mv(newid.clone());
+                                // node_clone.mv(newid.clone());
+                                node_clone.id = newid.clone();
+                                rename(sibid, &newid).unwrap();
                                 // link is another node
                                 // that this node points to in its content
                                 for link in &node_clone.links {
@@ -269,6 +264,7 @@ impl Tree {
                                         .iter()
                                         .map(|child_ref| rename_dfs(child_ref, &newid, map))
                                         .collect();
+                                    node.write_meta();
                                     map.insert(newid.clone(), node);
                                     newid
                                 }
@@ -279,7 +275,15 @@ impl Tree {
                                     .collect();
                                 self.nodes.insert(newid, node_clone);
                             }
-                            //git commit here
+                            commit_paths(
+                                &repo,
+                                vec![&Path::new("codex/*")],
+                                &format!(
+                                    "node renames due to new power of ten node {}",
+                                    &child_id.to_str().unwrap()
+                                ),
+                            )
+                            .unwrap();
                         }
                         None => {}
                     }
