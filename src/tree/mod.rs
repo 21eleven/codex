@@ -218,7 +218,10 @@ impl Tree {
                                 let mut node_clone = self.nodes.remove(sibid).unwrap();
                                 // node_clone.mv(newid.clone());
                                 node_clone.id = newid.clone();
-                                rename(sibid, &newid).unwrap();
+                                debug!("renaming {:?} to {:?}", sibid, &newid);
+                                let old_path = PathBuf::from("./codex").join(&sibid);
+                                let new_path = PathBuf::from("./codex").join(&newid);
+                                rename(old_path, new_path).unwrap();
                                 // link is another node
                                 // that this node points to in its content
                                 for link in &node_clone.links {
@@ -288,8 +291,10 @@ impl Tree {
                         None => {}
                     }
                     for node_ref in &siblings {
+                        debug!("resetting siblings array for {:?}", node_ref);
                         self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
                     }
+                    self.nodes.get_mut(&parent_ref).unwrap().children = siblings;
                 }
             }
             &[Some(node_name)] => {
