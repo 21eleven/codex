@@ -144,6 +144,19 @@ impl Handler for NeovimHandler {
             //     debug!("woke up, closing");
             //     Ok(Value::Nil)
             // }
+            "nodes" => {
+                let tree = &*self.tree.lock().unwrap();
+                let mut nodes: Vec<&str> = tree
+                    .nodes
+                    .keys()
+                    .map(|id| id.as_path().to_str().unwrap())
+                    .collect();
+                nodes.sort_unstable();
+
+                Ok(Value::Array(
+                    nodes.into_iter().map(|s| Value::String(s.into())).collect(),
+                ))
+            }
             _ => Ok(Value::Nil),
         }
     }

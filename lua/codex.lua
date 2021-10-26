@@ -4,7 +4,8 @@ local plugin_dir = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file("lua/codex.l
 vim.fn.setenv("CODEX_HOME", plugin_dir)
 -- set codex runtime dir here using some user config setting
 -- local codex_runtime_dir = vim.loop.os_homedir() .. ".local/share/codex"
-local codex_runtime_dir = vim.loop.os_homedir() .. "/gits/codex/data"
+-- local codex_runtime_dir = vim.loop.os_homedir() .. "/gits/codex/data"
+local codex_runtime_dir = vim.loop.os_homedir() .. "/tmp"
 vim.fn.setenv("CODEX_RUNTIME_DIR", codex_runtime_dir)
 
 local binary_path = plugin_dir .. "/target/debug/codex"
@@ -28,9 +29,14 @@ function M.stop()
         return
     end
     -- vim.rpcrequest(_t.job_id, "stop")
+
     vim.rpcnotify(_t.job_id, "stop")
     -- vim.fn.jobstop(_t.job_id)
     _t.job_id = nil
+end
+
+function M.nodes()
+  return vim.rpcrequest(_t.job_id, "nodes")
 end
 
 function M.plugin_dir()
