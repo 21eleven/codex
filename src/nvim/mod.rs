@@ -22,13 +22,6 @@ pub struct NeovimHandler {
     pub tree: Arc<Mutex<tree::Tree>>,
 }
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
-    let yyyymmdd = Local::now().format("%Y%m%d");
-
-    match env::current_dir().unwrap().to_str() {
-        Some(dir) => nvim.command(&format!("cd {}/codex", dir)).await.unwrap(),
-        None => {}
-    }
-    nvim.command(&format!("e {}.md", yyyymmdd)).await.unwrap();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_millis(250));
         let welcome = "C O D E X 📖".to_string();
@@ -52,7 +45,18 @@ impl Handler for NeovimHandler {
             "start" => {
                 log::debug!("starting CODEX!");
                 log::debug!("{:?}", self.repo.lock().unwrap().state());
-                log::debug!("tree on startup: {}", self.tree.lock().unwrap());
+                // let tree = &mut *self.tree.lock().unwrap();
+                // why can't I do this?? ^^^^^^^^^^^^^^^^^^^
+                // log::debug!("tree on startup: {}", &tree);
+                // let yyyymmdd = Local::now().format("%Y%m%d");
+                let today = self.tree.lock().unwrap().today_node();
+
+                match env::current_dir().unwrap().to_str() {
+                    Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
+                    None => {}
+                }
+                // let today = tree.today_node();
+                neovim.command(&format!("e {}/_.md", today.to_str().unwrap().to_string())).await.unwrap();
                 on_start(neovim).await;
             }
             "ping" => {
@@ -81,7 +85,7 @@ impl Handler for NeovimHandler {
             "create" => {
                 debug!("{:?}", _args);
                 let tree = &mut *self.tree.lock().unwrap();
-                tree.create_node(_args);
+                tree.node_creation(_args);
             }
             "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();

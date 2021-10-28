@@ -1,5 +1,6 @@
 use crate::node::{power_of_ten, Node, NodeMeta, NodeRef};
 use crate::utils::commit_paths;
+use chrono::Local;
 use git2::Repository;
 use log::*;
 use nom::bytes::complete::{tag, take_till};
@@ -106,6 +107,25 @@ pub fn next_sibling_id(path: &PathBuf) -> u64 {
     metas.len() as u64 + 1
 }
 
+pub fn next_child_id(path: &PathBuf) -> u64 {
+    // could be next root dir id
+    let search_dir = match path.parent() {
+        Some(parent) => PathBuf::from("./codex/").join(parent),
+        None => PathBuf::from("./codex/"),
+    };
+    // TODO: check search_dir exists?
+    let metas = WalkDir::new(search_dir)
+        .sort_by_file_name()
+        .contents_first(true)
+        .min_depth(1)
+        .max_depth(1)
+        .into_iter()
+        .map(|e| e.unwrap().into_path())
+        .filter(|p| p.is_file() && p.ends_with("meta.toml"))
+        .collect::<Vec<PathBuf>>();
+    metas.len() as u64 + 1
+}
+
 fn get_node_ref_number(node_ref: &NodeRef) -> u64 {
     let (_base, node) = node_ref
         .as_path()
@@ -200,11 +220,44 @@ impl Tree {
             desk: desk.unwrap(),
         })
     }
-    pub fn create_node(&mut self, args: Vec<Value>) {
-        // TODO: what would happen if the input had a '/'? sanatize
+    pub fn today_node(&mut self) -> NodeRef {
+        // 1-Wed-Oct-07-2021
+        // TODO: some way for user to pass in strf string
+        let today = Local::now().format("%a-%b-%d-%Y");
+        let id_guess = next_child_id(&self.journal) - 1;
+
+        let id_if_exists = PathBuf::from(format!("{}-{}", id_guess, today));
+        let journal = self.journal.clone();
+        if self.nodes.contains_key(&id_if_exists) {
+            id_if_exists
+        } else {
+            self.create_node(
+                Some(journal.to_str().unwrap()),
+                Some(&today.to_string()),
+            )
+            .unwrap()
+        }
+    }
+    pub fn node_creation(&mut self, args: Vec<Value>) {
         let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
         match args.as_slice() {
             &[Some(parent), Some(child)] => {
+                self.create_node(Some(parent), Some(child)).unwrap();
+            }
+            &[Some(node_name)] => {
+                self.create_node(None, Some(node_name)).unwrap();
+            }
+            _ => {
+                error!("invalid args to create: {:?}", args);
+            }
+        }
+    }
+    pub fn create_node(&mut self, parent: Option<&str>, child: Option<&str>) -> Result<NodeRef> {
+        // TODO: what would happen if the input had a '/'? sanatize
+        // need to decouple this node creation on tree
+        // from processing of RPC message pack value
+        match (parent, child) {
+            (Some(parent), Some(child)) => {
                 let parent = PathBuf::from(parent);
                 debug!("parent {:?} and child {:?}", parent, child);
                 let child = match self.nodes.get_mut(&parent) {
@@ -321,9 +374,15 @@ impl Tree {
                         self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
                     }
                     self.nodes.get_mut(&parent_ref).unwrap().children = siblings;
+                    Ok(child_id)
+                } else {
+                    error!("problem");
+                    Err(Box::new(TreeError {
+                        err_text: "child creation failed".to_string(),
+                    }))
                 }
             }
-            &[Some(node_name)] => {
+            (None, Some(node_name)) => {
                 // TODO what is the right way to remove this hard coding?
                 // 'static or const?
                 let root = PathBuf::from("./codex");
@@ -351,14 +410,25 @@ impl Tree {
                 let mut node = Node::create(node_name.to_string(), None);
                 siblings.push(node.id.clone());
                 node.siblings = siblings.clone();
+                let node_id = node.id.clone();
                 self.nodes.insert(node.id.clone(), node);
                 debug!("{:?}", siblings);
                 for node_ref in &siblings {
                     self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
                 }
+                Ok(node_id)
             }
             _ => {
-                error!("invalid args to create: {:?}", args);
+                error!(
+                    "invalid args to create_node: new node: {:?} parent: {:?}",
+                    child, parent
+                );
+                Err(Box::new(TreeError {
+                    err_text: format!(
+                        "invalid args to create_node: new node: {:?} parent: {:?}",
+                        child, parent
+                    ),
+                }))
             }
         }
     }
