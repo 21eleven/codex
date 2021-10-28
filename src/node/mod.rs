@@ -339,6 +339,10 @@ pub fn init_codex_repo() -> Repository {
     journal.tag(String::from("journal"));
     journal.write_meta();
     debug!("created journal: {}", journal);
+    let mut desk = Node::create("desk".to_string(), None);
+    desk.tag(String::from("desk"));
+    desk.write_meta();
+    debug!("created desk: {}", desk);
     commit_paths(&repo, vec![&Path::new("codex/*")], "codex init").unwrap();
     debug!("codex git repo initialized");
     repo
