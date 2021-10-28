@@ -151,6 +151,8 @@ impl Handler for NeovimHandler {
                     .keys()
                     .map(|id| id.as_path().to_str().unwrap())
                     .collect();
+                // since I am sorting here maybe I should
+                // switch from HashMap to BTreeMap
                 nodes.sort_unstable();
 
                 Ok(Value::Array(

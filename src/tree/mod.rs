@@ -17,6 +17,8 @@ pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 #[derive(Debug)]
 pub struct Tree {
     pub nodes: HashMap<NodeRef, Node>,
+    pub journal: NodeRef,
+    pub desk: NodeRef,
 }
 
 impl fmt::Display for Tree {
@@ -122,6 +124,8 @@ impl Tree {
             node_map: &mut HashMap<NodeRef, Node>,
             parent: Option<NodeRef>,
             siblings: Vec<NodeRef>,
+            journal: &mut Option<NodeRef>,
+            desk: &mut Option<NodeRef>,
             base: &Path,
         ) {
             let n = base.to_str().unwrap().chars().count();
@@ -156,6 +160,8 @@ impl Tree {
                     node_map,
                     name.clone(),
                     children.clone(),
+                    journal,
+                    desk,
                     base,
                 );
             }
@@ -164,6 +170,12 @@ impl Tree {
                     debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
                     let node = Node::from_tree(namepath, &meta_path, parent, siblings, children);
+                    if journal.is_none() && node.tags.contains("journal") {
+                        *journal = Some(node.id.clone());
+                    }
+                    if desk.is_none() && node.tags.contains("desk") {
+                        *desk = Some(node.id.clone());
+                    }
                     debug!("{}", &node);
                     node_map.insert(node.id.clone(), node);
                 }
@@ -171,8 +183,22 @@ impl Tree {
             }
         }
         let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
-        dfs(None, &mut node_map, None, vec![], Path::new(&root));
-        Ok(Tree { nodes: node_map })
+        let mut journal: Option<NodeRef> = None;
+        let mut desk: Option<NodeRef> = None;
+        dfs(
+            None,
+            &mut node_map,
+            None,
+            vec![],
+            &mut journal,
+            &mut desk,
+            Path::new(&root),
+        );
+        Ok(Tree {
+            nodes: node_map,
+            journal: journal.unwrap(),
+            desk: desk.unwrap(),
+        })
     }
     pub fn create_node(&mut self, args: Vec<Value>) {
         // TODO: what would happen if the input had a '/'? sanatize
