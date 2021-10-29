@@ -79,7 +79,7 @@ impl fmt::Display for Node {
         Ok(())
     }
 }
-fn prepare_path_name(node_name: &String) -> String {
+pub fn prepare_path_name(node_name: &String) -> String {
     node_name
         .to_ascii_lowercase()
         .chars()

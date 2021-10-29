@@ -1,4 +1,4 @@
-use crate::node::{power_of_ten, Node, NodeMeta, NodeRef};
+use crate::node::{power_of_ten, prepare_path_name, Node, NodeMeta, NodeRef};
 use crate::utils::commit_paths;
 use chrono::Local;
 use git2::Repository;
@@ -108,17 +108,14 @@ pub fn next_sibling_id(path: &PathBuf) -> u64 {
 }
 
 pub fn next_child_id(path: &PathBuf) -> u64 {
-    // could be next root dir id
-    let search_dir = match path.parent() {
-        Some(parent) => PathBuf::from("./codex/").join(parent),
-        None => PathBuf::from("./codex/"),
-    };
+    // why not just look in child array of parent?
     // TODO: check search_dir exists?
+    let search_dir = PathBuf::from("./codex/").join(path);
     let metas = WalkDir::new(search_dir)
         .sort_by_file_name()
         .contents_first(true)
-        .min_depth(1)
-        .max_depth(1)
+        .min_depth(2)
+        .max_depth(2)
         .into_iter()
         .map(|e| e.unwrap().into_path())
         .filter(|p| p.is_file() && p.ends_with("meta.toml"))
@@ -223,19 +220,22 @@ impl Tree {
     pub fn today_node(&mut self) -> NodeRef {
         // 1-Wed-Oct-07-2021
         // TODO: some way for user to pass in strf string
-        let today = Local::now().format("%a-%b-%d-%Y");
+        let today = Local::now().format("%a %b %d %Y");
         let id_guess = next_child_id(&self.journal) - 1;
 
-        let id_if_exists = PathBuf::from(format!("{}-{}", id_guess, today));
+        let id_if_exists = PathBuf::from(format!(
+            "{}/{}-{}",
+            self.journal.to_str().unwrap(),
+            id_guess,
+            prepare_path_name(&today.to_string())
+        ));
+        debug!("{:?}", id_if_exists);
         let journal = self.journal.clone();
         if self.nodes.contains_key(&id_if_exists) {
             id_if_exists
         } else {
-            self.create_node(
-                Some(journal.to_str().unwrap()),
-                Some(&today.to_string()),
-            )
-            .unwrap()
+            self.create_node(Some(journal.to_str().unwrap()), Some(&today.to_string()))
+                .unwrap()
         }
     }
     pub fn node_creation(&mut self, args: Vec<Value>) {
