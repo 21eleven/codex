@@ -218,22 +218,16 @@ impl Tree {
         })
     }
     pub fn today_node(&mut self) -> NodeRef {
-        // 1-Wed-Oct-07-2021
         // TODO: some way for user to pass in strf string
         let today = Local::now().format("%a %b %d %Y");
-        let id_guess = next_child_id(&self.journal) - 1;
-
-        let id_if_exists = PathBuf::from(format!(
-            "{}/{}-{}",
-            self.journal.to_str().unwrap(),
-            id_guess,
-            prepare_path_name(&today.to_string())
-        ));
-        debug!("{:?}", id_if_exists);
         let journal = self.journal.clone();
-        if self.nodes.contains_key(&id_if_exists) {
-            id_if_exists
+        let journal_node = self.nodes.get(&self.journal).unwrap();
+        let newest_child = &journal_node.children[journal_node.children.len()-1];
+        debug!("newest child {} today {}", newest_child.to_str().unwrap(), prepare_path_name(&today.to_string()));
+        if newest_child.to_str().unwrap().ends_with(&prepare_path_name(&today.to_string())) {
+            newest_child.to_path_buf()
         } else {
+            debug!("creating new day node for {}", &today);
             self.create_node(Some(journal.to_str().unwrap()), Some(&today.to_string()))
                 .unwrap()
         }
