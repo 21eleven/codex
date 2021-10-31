@@ -4,8 +4,8 @@ local plugin_dir = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file("lua/codex.l
 vim.fn.setenv("CODEX_HOME", plugin_dir)
 -- set codex runtime dir here using some user config setting
 -- local codex_runtime_dir = vim.loop.os_homedir() .. ".local/share/codex"
--- local codex_runtime_dir = vim.loop.os_homedir() .. "/gits/codex/data"
-local codex_runtime_dir = vim.loop.os_homedir() .. "/tmp"
+local codex_runtime_dir = vim.loop.os_homedir() .. "/gits/codex/data"
+-- local codex_runtime_dir = vim.loop.os_homedir() .. "/tmp"
 vim.fn.setenv("CODEX_RUNTIME_DIR", codex_runtime_dir)
 
 local binary_path = plugin_dir .. "/target/debug/codex"
@@ -35,8 +35,41 @@ function M.stop()
     _t.job_id = nil
 end
 
-function M.nodes()
+function M.get_nodes()
   return vim.rpcrequest(_t.job_id, "nodes")
+end
+
+function M.entry_maker(node)
+  return {
+    -- value = node .. '/meta.toml',
+    value = node .. '/_.md',
+    display = node,
+    ordinal = node,
+  }
+end
+
+function M.nodes()
+  local nodes = M.get_nodes()
+  local Picker = require('telescope.pickers')
+  local Finder = require('telescope.finders')
+  local Sorter = require('telescope.sorters')
+  local finder_fn = Finder.new_table({
+    results = nodes,
+    entry_maker = M.entry_maker
+  })
+
+  local picker = Picker:new({
+    prompt_title = 'codex nodes',
+    finder = finder_fn,
+    sorter = Sorter.get_generic_fuzzy_sorter(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat', entry.value }
+      end,
+    }),
+  })
+
+  return picker:find()
 end
 
 function M.plugin_dir()
