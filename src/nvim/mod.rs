@@ -150,14 +150,15 @@ impl Handler for NeovimHandler {
             // }
             "nodes" => {
                 let tree = &*self.tree.lock().unwrap();
-                let mut nodes: Vec<&str> = tree
+                // let mut nodes: Vec<&str> = tree
+                let nodes: Vec<&str> = tree
                     .nodes
                     .keys()
                     .map(|id| id.as_path().to_str().unwrap())
                     .collect();
                 // since I am sorting here maybe I should
                 // switch from HashMap to BTreeMap
-                nodes.sort_unstable();
+                // nodes.sort_unstable();
 
                 Ok(Value::Array(
                     nodes.into_iter().map(|s| Value::String(s.into())).collect(),
