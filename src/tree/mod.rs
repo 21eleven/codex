@@ -6,7 +6,7 @@ use log::*;
 use nom::bytes::complete::{tag, take_till};
 use nom::IResult;
 use nvim_rs::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, BTreeMap};
 use std::error;
 use std::fmt;
 use std::fs::rename;
@@ -17,7 +17,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug)]
 pub struct Tree {
-    pub nodes: HashMap<NodeRef, Node>,
+    pub nodes: BTreeMap<NodeRef, Node>,
     pub journal: NodeRef,
     pub desk: NodeRef,
 }
@@ -138,7 +138,7 @@ impl Tree {
     pub fn build(root: String) -> Result<Tree> {
         fn dfs(
             name: Option<PathBuf>,
-            node_map: &mut HashMap<NodeRef, Node>,
+            node_map: &mut BTreeMap<NodeRef, Node>,
             parent: Option<NodeRef>,
             siblings: Vec<NodeRef>,
             journal: &mut Option<NodeRef>,
@@ -199,7 +199,7 @@ impl Tree {
                 None => {}
             }
         }
-        let mut node_map: HashMap<NodeRef, Node> = HashMap::new();
+        let mut node_map: BTreeMap<NodeRef, Node> = BTreeMap::new();
         let mut journal: Option<NodeRef> = None;
         let mut desk: Option<NodeRef> = None;
         dfs(
@@ -311,7 +311,7 @@ impl Tree {
                                 fn rename_dfs(
                                     node_ref: &NodeRef,
                                     parent: &NodeRef,
-                                    map: &mut HashMap<NodeRef, Node>,
+                                    map: &mut BTreeMap<NodeRef, Node>,
                                 ) -> NodeRef {
                                     let mut node = map.remove(node_ref).unwrap();
                                     let (_, node_name) = node_ref
