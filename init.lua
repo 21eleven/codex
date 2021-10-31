@@ -22,10 +22,15 @@ end
 vim.cmd [[packadd packer.nvim]]
 
 require('packer').startup(function()
-	use 'wbthomason/packer.nvim'
-	use {'dracula/vim', as = 'dracula'}
-        use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
+  use 'wbthomason/packer.nvim'
+  use {'dracula/vim', as = 'dracula'}
+  use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
+  use {
+    'nvim-telescope/telescope.nvim',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
 end)
+
 vim.cmd [[colorscheme dracula]]
 
 Codex = require("lua/codex")
