@@ -16,13 +16,13 @@ use walkdir::{DirEntry, WalkDir};
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug)]
-pub struct Tree {
-    pub nodes: BTreeMap<NodeRef, Node>,
+pub struct Tree<'b> {
+    pub nodes: BTreeMap<NodeRef, Node<'b>>,
     pub journal: NodeRef,
     pub desk: NodeRef,
 }
 
-impl fmt::Display for Tree {
+impl fmt::Display for Tree <'_>{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Tree(\n")?;
         let mut keys: Vec<PathBuf> = self.nodes.keys().map(|p| p.to_owned()).collect();
@@ -134,8 +134,8 @@ fn get_node_ref_number(node_ref: &NodeRef) -> u64 {
     x.parse::<u64>().unwrap()
 }
 
-impl Tree {
-    pub fn build(root: String) -> Result<Tree> {
+impl Tree<'_> {
+    pub fn build(root: String) -> Result<Tree<'static>> {
         fn dfs(
             name: Option<PathBuf>,
             node_map: &mut BTreeMap<NodeRef, Node>,

@@ -40,13 +40,13 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     }
 }
 
-type Entity = Box<Node>;
+// type Entity = Box<Node>;
 
 pub type NodeRef = PathBuf;
 
 #[derive(Debug, Clone)]
-pub struct Node {
-    pub id: NodeRef,
+pub struct Node<'a> {
+    pub id: &'a str,
     pub name: String,
     pub parent: Option<NodeRef>,
     pub siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
@@ -58,7 +58,7 @@ pub struct Node {
     pub updated: DateTime<Local>,
     pub updates: u64,
 }
-impl fmt::Display for Node {
+impl fmt::Display for  Node<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Node({}): {{\n", self.name)?;
         write!(f, "\t id: {}\n", self.id.to_str().unwrap())?;
@@ -90,8 +90,8 @@ pub fn prepare_path_name(node_name: &String) -> String {
         .collect()
 }
 
-impl Node {
-    fn new(name: String, parent: Option<&Node>) -> Node {
+impl Node<'a> {
+    fn new(name: String, parent: Option<&Node>) -> Node<'a> {
         let path_name = prepare_path_name(&name);
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
@@ -128,7 +128,7 @@ impl Node {
             updates: 1,
         }
     }
-    pub fn create(name: String, parent: Option<&Node>) -> Node {
+    pub fn create(name: String, parent: Option<&Node>) -> Node<'a> {
         // what if directory already exists?
         let node = Node::new(name, parent);
         let directory = Path::new("codex").join(&node.id);
