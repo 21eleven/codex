@@ -18,6 +18,7 @@ use std::fmt;
 // struct HierarchicalIdentifier {
 //     codex_path: String
 // }
+
 const CODEX_ROOT: &str = "./codex/";
 pub enum Entry {
     Page,
@@ -42,17 +43,17 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
 
 // type Entity = Box<Node>;
 
-pub type NodeRef = PathBuf;
+pub type NodeRef<'a> = &'a str;
 
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
-    pub id: &'a str,
+    pub id: NodeRef<'a>,
     pub name: String,
-    pub parent: Option<NodeRef>,
-    pub siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    pub children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
-    pub links: HashSet<NodeRef>,
-    pub backlinks: HashSet<NodeRef>,
+    pub parent: Option<NodeRef<'a>>,
+    pub siblings: Vec<NodeRef<'a>>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    pub children: Vec<NodeRef<'a>>, // parent has a point to it's children shared/sibling/family vec
+    pub links: HashSet<NodeRef<'a>>,
+    pub backlinks: HashSet<NodeRef<'a>>,
     pub tags: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
@@ -61,12 +62,12 @@ pub struct Node<'a> {
 impl fmt::Display for  Node<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Node({}): {{\n", self.name)?;
-        write!(f, "\t id: {}\n", self.id.to_str().unwrap())?;
+        write!(f, "\t id: {}\n", self.id);
         write!(
             f,
             "\t parent: {}\n",
-            match &self.parent {
-                Some(parent) => parent.to_str().unwrap(),
+            match self.parent {
+                Some(parent) => parent,
                 None => "None",
             }
         )?;
@@ -90,7 +91,7 @@ pub fn prepare_path_name(node_name: &String) -> String {
         .collect()
 }
 
-impl Node<'a> {
+impl<'a> Node<'a> {
     fn new(name: String, parent: Option<&Node>) -> Node<'a> {
         let path_name = prepare_path_name(&name);
         let (node_path, parent_option) = match parent {
@@ -162,7 +163,7 @@ impl Node<'a> {
         parent: Option<NodeRef>,
         siblings: Vec<NodeRef>,
         children: Vec<NodeRef>,
-    ) -> Node {
+    ) -> Node<'a> {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
         Node {

@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use crate::tree;
 use crate::tree::next_sibling_id;
-use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -17,9 +16,9 @@ use tokio::io::Stdout;
 use tokio::time;
 
 #[derive(Clone)]
-pub struct NeovimHandler {
+pub struct NeovimHandler<'a> {
     pub repo: Arc<Mutex<Repository>>,
-    pub tree: Arc<Mutex<tree::Tree>>,
+    pub tree: Arc<Mutex<tree::Tree<'a>>>,
 }
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     tokio::spawn(async move {
@@ -37,7 +36,7 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
 }
 
 #[async_trait]
-impl Handler for NeovimHandler {
+impl Handler for NeovimHandler<'static> {
     type Writer = Compat<Stdout>;
 
     async fn handle_notify(&self, name: String, _args: Vec<Value>, neovim: Neovim<Compat<Stdout>>) {

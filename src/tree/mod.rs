@@ -17,9 +17,9 @@ pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug)]
 pub struct Tree<'b> {
-    pub nodes: BTreeMap<NodeRef, Node<'b>>,
-    pub journal: NodeRef,
-    pub desk: NodeRef,
+    pub nodes: BTreeMap<NodeRef<'b>, Node<'b>>,
+    pub journal: &'b str,
+    pub desk: NodeRef<'b>,
 }
 
 impl fmt::Display for Tree <'_>{
@@ -308,11 +308,11 @@ impl Tree<'_> {
                                     backlinked.rename_link(&sibid, &newid);
                                 }
                                 // WHAT ABOUT THE CHILDREN???
-                                fn rename_dfs(
+                                fn rename_dfs<'a>(
                                     node_ref: &NodeRef,
                                     parent: &NodeRef,
                                     map: &mut BTreeMap<NodeRef, Node>,
-                                ) -> NodeRef {
+                                ) -> NodeRef<'a> {
                                     let mut node = map.remove(node_ref).unwrap();
                                     let (_, node_name) = node_ref
                                         .as_path()
