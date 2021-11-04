@@ -47,19 +47,19 @@ pub type NodeRef<'a> = &'a str;
 
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
-    pub id: NodeRef<'a>,
-    pub name: String,
-    pub parent: Option<NodeRef<'a>>,
-    pub siblings: Vec<NodeRef<'a>>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    pub children: Vec<NodeRef<'a>>, // parent has a point to it's children shared/sibling/family vec
-    pub links: HashSet<NodeRef<'a>>,
-    pub backlinks: HashSet<NodeRef<'a>>,
-    pub tags: HashSet<String>,
+    pub id: &'a str,
+    pub name: &'a str,
+    pub parent: Option<&'a str>,
+    pub siblings: Vec<&'a str>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    pub children: Vec<&'a str>, // parent has a point to it's children shared/sibling/family vec
+    pub links: HashSet<&'a str>,
+    pub backlinks: HashSet<&'a str>,
+    pub tags: HashSet<&'a str>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
     pub updates: u64,
 }
-impl fmt::Display for  Node<'_> {
+impl fmt::Display for Node<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Node({}): {{\n", self.name)?;
         write!(f, "\t id: {}\n", self.id);
@@ -80,7 +80,7 @@ impl fmt::Display for  Node<'_> {
         Ok(())
     }
 }
-pub fn prepare_path_name(node_name: &String) -> String {
+pub fn prepare_path_name<'a>(node_name: &'a str) -> &'a str {
     node_name
         .to_ascii_lowercase()
         .chars()
@@ -88,35 +88,33 @@ pub fn prepare_path_name(node_name: &String) -> String {
             ' ' => '-',
             _ => c,
         })
-        .collect()
+        .collect::<String>()
+        .as_str()
 }
 
 impl<'a> Node<'a> {
-    fn new(name: String, parent: Option<&Node>) -> Node<'a> {
+    fn new(name: &'a str, parent: Option<&Node<'a>>) -> Node<'a> {
         let path_name = prepare_path_name(&name);
         let (node_path, parent_option) = match parent {
             Some(parent_node) => {
-                let path = parent_node.id.clone();
+                let path = parent_node.id;
                 let sibling_num = parent_node.children.len() + 1;
                 // TODO: if id is a new order of magnitude then update
                 // the id of all other siblings to have an extra zero
                 // to pad the next decimal place
                 // eg "1" -> "01" using some `node.rename()` method
-                let node_path = path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name)));
-                (node_path, Some(parent_node.id.clone()))
+                // let node_path = path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name)));
+                let node_path = format!("{}/{}-{}", path, sibling_num, path_name);
+                (node_path, Some(parent_node.id))
             }
             None => {
-                let path = PathBuf::from("");
-                let sibling_num = next_sibling_id(&path);
-                (
-                    path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name))),
-                    None,
-                )
+                let sibling_num = next_sibling_id(&PathBuf::from(""));
+                (format!("{}-{}", sibling_num, path_name), None)
             }
         };
         let now = Local::now();
         Node {
-            id: node_path,
+            id: &node_path,
             name,
             parent: parent_option,
             siblings: vec![],
@@ -129,7 +127,7 @@ impl<'a> Node<'a> {
             updates: 1,
         }
     }
-    pub fn create(name: String, parent: Option<&Node>) -> Node<'a> {
+    pub fn create(name: &'a str, parent: Option<&Node<'a>>) -> Node<'a> {
         // what if directory already exists?
         let node = Node::new(name, parent);
         let directory = Path::new("codex").join(&node.id);
@@ -158,11 +156,11 @@ impl<'a> Node<'a> {
         node
     }
     pub fn from_tree(
-        id: PathBuf,
-        toml_path: &Path,
-        parent: Option<NodeRef>,
-        siblings: Vec<NodeRef>,
-        children: Vec<NodeRef>,
+        id: &'a str,
+        toml_path: &'a Path,
+        parent: Option<&'a str>,
+        siblings: Vec<&'a str>,
+        children: Vec<&'a str>,
     ) -> Node<'a> {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
@@ -172,11 +170,8 @@ impl<'a> Node<'a> {
             parent,
             siblings,
             children,
-            links: links.into_iter().map(|p| p.try_into().unwrap()).collect(),
-            backlinks: backlinks
-                .into_iter()
-                .map(|p| p.try_into().unwrap())
-                .collect(),
+            links: links.into_iter().collect(),
+            backlinks: backlinks.into_iter().collect(),
             tags: tags.into_iter().collect(),
             created,
             updated,
@@ -186,14 +181,14 @@ impl<'a> Node<'a> {
     pub fn rerank(&mut self, rank: u64) {
         todo!();
     }
-    pub fn mv(&mut self, new_path: NodeRef) {
+    pub fn mv(&mut self, new_path: &'a str) {
         // should probably return a result
         // primitive fn for moving across fs
         // should be a git move
         self.id = new_path;
         todo!();
     }
-    pub fn rename_link(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+    pub fn rename_link(&mut self, old_name: &'a str, new_name: &'a str) {
         // TODO rename all instances of the link in the content file
         // for i in 0..self.links.len() {
         // should links be a hashset?
@@ -203,12 +198,12 @@ impl<'a> Node<'a> {
         // }
         // }
         self.links.remove(old_name);
-        self.links.insert(new_name.to_path_buf());
+        self.links.insert(new_name);
         self.write_meta();
     }
-    pub fn rename_backlink(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+    pub fn rename_backlink(&mut self, old_name: &'a str, new_name: &'a str) {
         self.backlinks.remove(old_name);
-        self.backlinks.insert(new_name.to_path_buf());
+        self.backlinks.insert(new_name);
         self.write_meta();
     }
     pub fn update(&mut self) {
@@ -240,22 +235,22 @@ impl<'a> Node<'a> {
         }
         self.updated = now;
     }
-    pub fn create_child(&mut self, name: String) -> Node {
+    pub fn create_child(&mut self, name: &'a str) -> Node<'a> {
         let child = Node::create(name, Some(&self));
         self.children.push(child.id.clone());
         child
     }
-    fn tag(&mut self, new_tag: String) {
+    fn tag(&mut self, new_tag: &'a str) {
         self.tags.insert(new_tag);
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct NodeMeta {
-    pub name: String,
-    pub tags: Vec<String>,
-    pub links: Vec<String>,
-    pub backlinks: Vec<String>,
+pub struct NodeMeta<'a> {
+    pub name: &'a str,
+    pub tags: Vec<&'a str>,
+    pub links: Vec<&'a str>,
+    pub backlinks: Vec<&'a str>,
     #[serde(with = "codex_date_format")]
     pub created: DateTime<Local>,
     #[serde(with = "codex_date_format")]
@@ -263,8 +258,8 @@ pub struct NodeMeta {
     pub updates: u64,
 }
 
-impl NodeMeta {
-    pub fn new(name: String) -> NodeMeta {
+impl<'a> NodeMeta<'a> {
+    pub fn new(name: &str) -> NodeMeta {
         let now = Local::now();
         NodeMeta {
             name,
@@ -276,25 +271,15 @@ impl NodeMeta {
             updates: 1,
         }
     }
-    pub fn from(node: &Node) -> NodeMeta {
-        let mut tags: Vec<String> = node.tags.clone().into_iter().collect();
+    pub fn from(node: &'a Node<'_>) -> NodeMeta<'a> {
+        let mut tags: Vec<&'a str> = node.tags.clone().into_iter().collect();
         tags.sort_unstable();
-        let mut links: Vec<String> = node
-            .links
-            .clone()
-            .into_iter()
-            .map(|x| x.to_str().unwrap().to_owned())
-            .collect();
+        let mut links: Vec<&'a str> = node.links.clone().into_iter().collect();
         links.sort_unstable();
-        let mut backlinks: Vec<String> = node
-            .backlinks
-            .clone()
-            .into_iter()
-            .map(|x| x.to_str().unwrap().to_owned())
-            .collect();
+        let mut backlinks: Vec<&'a str> = node.backlinks.clone().into_iter().collect();
         backlinks.sort_unstable();
         NodeMeta {
-            name: node.name.clone(),
+            name: &node.name,
             tags,
             links,
             backlinks,
@@ -310,10 +295,10 @@ impl NodeMeta {
     pub fn data(
         self,
     ) -> (
-        String,
-        Vec<String>,
-        Vec<String>,
-        Vec<String>,
+        &'a str,
+        Vec<&'a str>,
+        Vec<&'a str>,
+        Vec<&'a str>,
         DateTime<Local>,
         DateTime<Local>,
         u64,
@@ -336,12 +321,12 @@ impl NodeMeta {
 pub fn init_codex_repo() -> Repository {
     fs::create_dir(CODEX_ROOT).unwrap();
     let repo = Repository::init("./").unwrap();
-    let mut journal = Node::create("journal".to_string(), None);
-    journal.tag(String::from("journal"));
+    let mut journal = Node::create("journal", None);
+    journal.tag("journal");
     journal.write_meta();
     debug!("created journal: {}", journal);
-    let mut desk = Node::create("desk".to_string(), None);
-    desk.tag(String::from("desk"));
+    let mut desk = Node::create("desk", None);
+    desk.tag("desk");
     desk.write_meta();
     debug!("created desk: {}", desk);
     commit_paths(&repo, vec![&Path::new("codex/*")], "codex init").unwrap();
