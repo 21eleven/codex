@@ -6,7 +6,8 @@ use std::env;
 use std::error::Error;
 use std::sync::Arc;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
-use std::sync::Mutex;
+// use std::sync::Mutex;
+use tokio::sync::Mutex;
 mod node;
 mod nvim;
 mod tree;

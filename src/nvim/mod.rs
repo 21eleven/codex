@@ -7,11 +7,12 @@ use std::sync::Arc;
 use crate::tree;
 use crate::tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
+use tokio::sync::Mutex;
 use crate::node::power_of_ten;
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
-use std::sync::Mutex;
+// use std::sync::Mutex;
 use tokio::io::Stdout;
 use tokio::time;
 
@@ -19,6 +20,10 @@ use tokio::time;
 pub struct NeovimHandler<'a> {
     pub repo: Arc<Mutex<Repository>>,
     pub tree: Arc<Mutex<tree::Tree<'a>>>,
+}
+
+impl NeovimHandler<'_> {
+
 }
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     tokio::spawn(async move {
@@ -43,19 +48,22 @@ impl Handler for NeovimHandler<'static> {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
-                log::debug!("{:?}", self.repo.lock().unwrap().state());
+                log::debug!("{:?}", self.repo.lock().await.state());
                 // let tree = &mut *self.tree.lock().unwrap();
                 // why can't I do this?? ^^^^^^^^^^^^^^^^^^^
                 // log::debug!("tree on startup: {}", &tree);
                 // let yyyymmdd = Local::now().format("%Y%m%d");
-                let today = self.tree.lock().unwrap().today_node();
+
+                // let today = self.tree.lock().await.today_node();
+                let tree = self.tree.lock().await;
+                let today = tree.journal;
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
                     None => {}
                 }
                 // let today = tree.today_node();
-                neovim.command(&format!("e {}/_.md", today.to_str().unwrap().to_string())).await.unwrap();
+                neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 on_start(neovim).await;
             }
             "ping" => {
@@ -83,18 +91,18 @@ impl Handler for NeovimHandler<'static> {
             }
             "create" => {
                 debug!("{:?}", _args);
-                let tree = &mut *self.tree.lock().unwrap();
-                tree.node_creation(_args);
+                let tree = &mut *self.tree.lock().await;
+                // tree.node_creation(_args);
             }
             "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
-                let tree = &*self.tree.lock().unwrap();
+                let tree = &*self.tree.lock().await;
                 match args.as_slice() {
                     &[Some(node_ref)] => {
                         debug!(
                             "{:?}: {}",
                             node_ref,
-                            tree.nodes.get(&PathBuf::from(&node_ref)).unwrap()
+                            tree.nodes.get(node_ref).unwrap()
                         );
                     }
                     _ => {}
@@ -148,12 +156,12 @@ impl Handler for NeovimHandler<'static> {
             //     Ok(Value::Nil)
             // }
             "nodes" => {
-                let tree = &*self.tree.lock().unwrap();
+                let tree = &*self.tree.lock().await;
                 // let mut nodes: Vec<&str> = tree
                 let nodes: Vec<&str> = tree
                     .nodes
                     .keys()
-                    .map(|id| id.as_path().to_str().unwrap())
+                    .map(|id| id.to_owned())
                     .collect();
                 // since I am sorting here maybe I should
                 // switch from HashMap to BTreeMap

@@ -132,7 +132,7 @@ fn get_node_ref_number(node_ref: &NodeRef) -> u64 {
 }
 
 impl<'a> Tree<'a> {
-    pub fn build(root: String) -> Result<Tree<'static>> {
+    pub fn build(root: String) -> Result<Tree<'a>> {
         fn dfs<'a>(
             dirname: Option<&'a Path>,
             node_map: &mut BTreeMap<&'a str, Node<'a>>,
