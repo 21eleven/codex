@@ -56,7 +56,7 @@ impl Handler for NeovimHandler {
                     None => {}
                 }
                 // let today = tree.today_node();
-                neovim.command(&format!("e {}/_.md", today.to_str().unwrap().to_string())).await.unwrap();
+                neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 on_start(neovim).await;
             }
             "ping" => {
@@ -95,7 +95,7 @@ impl Handler for NeovimHandler {
                         debug!(
                             "{:?}: {}",
                             node_ref,
-                            tree.nodes.get(&PathBuf::from(&node_ref)).unwrap()
+                            tree.nodes.get(&node_ref.to_string()).unwrap()
                         );
                     }
                     _ => {}
@@ -118,7 +118,7 @@ impl Handler for NeovimHandler {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
                 match args.as_slice() {
                     &[Some(dir)] => {
-                        let id = next_sibling_id(&PathBuf::from(dir));
+                        let id = next_sibling_id(&dir.to_string());
                         debug!("SIB ID: {}", id);
                     }
                     _ => {}
@@ -151,11 +151,7 @@ impl Handler for NeovimHandler {
             "nodes" => {
                 let tree = &*self.tree.lock().unwrap();
                 // let mut nodes: Vec<&str> = tree
-                let nodes: Vec<&str> = tree
-                    .nodes
-                    .keys()
-                    .map(|id| id.as_path().to_str().unwrap())
-                    .collect();
+                let nodes: Vec<String> = tree.nodes.keys().map(|id| id.to_string()).collect();
                 // since I am sorting here maybe I should
                 // switch from HashMap to BTreeMap
                 // nodes.sort_unstable();

@@ -43,16 +43,17 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
 type Entity = Box<Node>;
 
 pub type NodeRef = PathBuf;
+pub type NodeKey = String;
 
 #[derive(Debug, Clone)]
 pub struct Node {
-    pub id: NodeRef,
+    pub id: NodeKey,
     pub name: String,
-    pub parent: Option<NodeRef>,
-    pub siblings: Vec<NodeRef>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    pub children: Vec<NodeRef>, // parent has a point to it's children shared/sibling/family vec
-    pub links: HashSet<NodeRef>,
-    pub backlinks: HashSet<NodeRef>,
+    pub parent: Option<NodeKey>,
+    pub siblings: Vec<NodeKey>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
+    pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
+    pub links: HashSet<NodeKey>,
+    pub backlinks: HashSet<NodeKey>,
     pub tags: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
@@ -61,12 +62,12 @@ pub struct Node {
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Node({}): {{\n", self.name)?;
-        write!(f, "\t id: {}\n", self.id.to_str().unwrap())?;
+        write!(f, "\t id: {}\n", self.id)?;
         write!(
             f,
             "\t parent: {}\n",
             match &self.parent {
-                Some(parent) => parent.to_str().unwrap(),
+                Some(parent) => parent,
                 None => "None",
             }
         )?;
@@ -81,7 +82,7 @@ impl fmt::Display for Node {
 }
 pub fn prepare_path_name(node_name: &String) -> String {
     node_name
-        .to_ascii_lowercase()
+        // .to_ascii_lowercase()
         .chars()
         .map(|c| match c {
             ' ' => '-',
@@ -93,29 +94,21 @@ pub fn prepare_path_name(node_name: &String) -> String {
 impl Node {
     fn new(name: String, parent: Option<&Node>) -> Node {
         let path_name = prepare_path_name(&name);
-        let (node_path, parent_option) = match parent {
+        let (node_key, parent_option) = match parent {
             Some(parent_node) => {
-                let path = parent_node.id.clone();
                 let sibling_num = parent_node.children.len() + 1;
-                // TODO: if id is a new order of magnitude then update
-                // the id of all other siblings to have an extra zero
-                // to pad the next decimal place
-                // eg "1" -> "01" using some `node.rename()` method
-                let node_path = path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name)));
-                (node_path, Some(parent_node.id.clone()))
+                let node_key = format!("{}/{}-{}", parent_node.id, sibling_num, path_name);
+                (node_key, Some(parent_node.id.clone()))
             }
             None => {
-                let path = PathBuf::from("");
-                let sibling_num = next_sibling_id(&path);
-                (
-                    path.join(PathBuf::from(format!("{}-{}", sibling_num, path_name))),
-                    None,
-                )
+                let sibling_num = next_sibling_id(&"".to_string());
+                // TODO: are we handling order of mag rollover here?
+                (format!("{}-{}", sibling_num, path_name), None)
             }
         };
         let now = Local::now();
         Node {
-            id: node_path,
+            id: node_key,
             name,
             parent: parent_option,
             siblings: vec![],
@@ -157,11 +150,11 @@ impl Node {
         node
     }
     pub fn from_tree(
-        id: PathBuf,
+        id: NodeKey,
         toml_path: &Path,
-        parent: Option<NodeRef>,
-        siblings: Vec<NodeRef>,
-        children: Vec<NodeRef>,
+        parent: Option<NodeKey>,
+        siblings: Vec<NodeKey>,
+        children: Vec<NodeKey>,
     ) -> Node {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
@@ -185,14 +178,14 @@ impl Node {
     pub fn rerank(&mut self, rank: u64) {
         todo!();
     }
-    pub fn mv(&mut self, new_path: NodeRef) {
+    pub fn mv(&mut self, new_path: NodeKey) {
         // should probably return a result
         // primitive fn for moving across fs
         // should be a git move
         self.id = new_path;
         todo!();
     }
-    pub fn rename_link(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+    pub fn rename_link(&mut self, old_name: &NodeKey, new_name: &NodeKey) {
         // TODO rename all instances of the link in the content file
         // for i in 0..self.links.len() {
         // should links be a hashset?
@@ -202,12 +195,12 @@ impl Node {
         // }
         // }
         self.links.remove(old_name);
-        self.links.insert(new_name.to_path_buf());
+        self.links.insert(new_name.to_string());
         self.write_meta();
     }
-    pub fn rename_backlink(&mut self, old_name: &NodeRef, new_name: &NodeRef) {
+    pub fn rename_backlink(&mut self, old_name: &NodeKey, new_name: &NodeKey) {
         self.backlinks.remove(old_name);
-        self.backlinks.insert(new_name.to_path_buf());
+        self.backlinks.insert(new_name.to_string());
         self.write_meta();
     }
     pub fn update(&mut self) {
@@ -278,19 +271,9 @@ impl NodeMeta {
     pub fn from(node: &Node) -> NodeMeta {
         let mut tags: Vec<String> = node.tags.clone().into_iter().collect();
         tags.sort_unstable();
-        let mut links: Vec<String> = node
-            .links
-            .clone()
-            .into_iter()
-            .map(|x| x.to_str().unwrap().to_owned())
-            .collect();
+        let mut links: Vec<String> = node.links.clone().into_iter().collect();
         links.sort_unstable();
-        let mut backlinks: Vec<String> = node
-            .backlinks
-            .clone()
-            .into_iter()
-            .map(|x| x.to_str().unwrap().to_owned())
-            .collect();
+        let mut backlinks: Vec<String> = node.backlinks.clone().into_iter().collect();
         backlinks.sort_unstable();
         NodeMeta {
             name: node.name.clone(),
