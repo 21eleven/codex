@@ -6,6 +6,7 @@ use log::*;
 use nom::bytes::complete::{tag, take_till};
 use nom::IResult;
 use nvim_rs::Value;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::error;
 use std::fmt;
@@ -145,7 +146,7 @@ impl Tree {
             name: Option<NodeKey>,
             node_map: &mut BTreeMap<NodeKey, Node>,
             parent: Option<NodeKey>,
-            siblings: Vec<NodeKey>,
+            siblings: RefCell<Vec<NodeKey>>,
             journal: &mut Option<NodeKey>,
             desk: &mut Option<NodeKey>,
             base: &Path,
@@ -155,26 +156,28 @@ impl Tree {
                 None => base.to_path_buf(),
                 Some(name_path) => base.join(PathBuf::from(name_path)),
             };
-            let children = WalkDir::new(search_dir)
-                .sort_by_file_name()
-                .contents_first(true)
-                .min_depth(2)
-                .max_depth(2)
-                .into_iter()
-                .map(|entry| entry.unwrap())
-                .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
-                .map(|e| {
-                    e.into_path()
-                        .parent()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .chars()
-                        .skip(n)
-                        .collect::<String>()
-                })
-                .collect::<Vec<NodeKey>>();
-            for node in &children {
+            let children = RefCell::new(
+                WalkDir::new(search_dir)
+                    .sort_by_file_name()
+                    .contents_first(true)
+                    .min_depth(2)
+                    .max_depth(2)
+                    .into_iter()
+                    .map(|entry| entry.unwrap())
+                    .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
+                    .map(|e| {
+                        e.into_path()
+                            .parent()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .chars()
+                            .skip(n)
+                            .collect::<String>()
+                    })
+                    .collect::<Vec<NodeKey>>(),
+            );
+            for node in children.borrow().iter() {
                 dfs(
                     Some(node.clone()),
                     node_map,
@@ -209,7 +212,7 @@ impl Tree {
             None,
             &mut node_map,
             None,
-            vec![],
+            RefCell::new(vec![]),
             &mut journal,
             &mut desk,
             Path::new(&root),
@@ -225,7 +228,8 @@ impl Tree {
         let today = Local::now().format("%a %b %d %Y");
         let journal = self.journal.clone();
         let journal_node = self.nodes.get(&self.journal).unwrap();
-        let newest_child = journal_node.children[journal_node.children.len() - 1].clone();
+        let newest_child =
+            journal_node.children.borrow_mut()[journal_node.children.borrow().len() - 1].clone();
         debug!(
             "newest child {} today {}",
             newest_child,
@@ -269,23 +273,34 @@ impl Tree {
                     }
                 };
                 if let Some(child) = child {
+                    // a new node is created, it has a parent
                     let child_id = child.id.clone();
                     self.nodes.insert(child.id.clone(), child);
                     let parent_ref = get_parent(&child_id).unwrap();
-                    let mut siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
                     match power_of_ten(get_node_key_number(&child_id)) {
                         Some(n) => {
+                            // this newly created node is a power of 10 node
+                            // we must go to all the siblings and rename them
                             // TODO make this section more DRY
                             let repo = Repository::open("./").unwrap();
-                            for idx in 0..siblings.len() {
-                                if &siblings[idx] == &child_id {
+                            let siblings = self
+                                .nodes
+                                .get_mut(&parent_ref)
+                                .unwrap().children.clone();
+                            for idx in 0..siblings.borrow().len() {
+                                if &siblings.borrow()[idx] == &child_id {
+                                    // the new nodes is named in the
+                                    // siblings vec, it does not need
+                                    // rename
                                     continue;
                                 }
-                                let sibid = &siblings[idx].clone();
+                                // get current name of siblings
+                                let sibid = &siblings.borrow_mut()[idx].clone();
                                 // TODO make this a function -> (u64, &str)
                                 let (base, node) = sibid.rsplit_once('/').unwrap();
                                 let (x, name_path) = node.split_once('-').unwrap();
                                 let x = x.parse::<u64>().unwrap();
+                                // new name of sibling
                                 let newid = format!(
                                     "{}/{:0width$}-{}",
                                     base,
@@ -293,13 +308,15 @@ impl Tree {
                                     name_path,
                                     width = (n as usize) + 1
                                 );
-                                siblings[idx] = newid.clone();
+                                siblings.borrow_mut()[idx] = newid.clone();
+                                // remove sib node w old key from map
                                 let mut node_clone = self.nodes.remove(sibid).unwrap();
                                 // node_clone.mv(newid.clone());
                                 node_clone.id = newid.clone();
                                 debug!("renaming {:?} to {:?}", sibid, &newid);
                                 let old_path = PathBuf::from("./codex").join(&sibid);
                                 let new_path = PathBuf::from("./codex").join(&newid);
+                                // move sib node on fs
                                 rename(old_path, new_path).unwrap();
                                 // link is another node
                                 // that this node points to in its content
@@ -313,15 +330,22 @@ impl Tree {
                                     let backlinked = self.nodes.get_mut(backlink).unwrap();
                                     backlinked.rename_link(&sibid, &newid);
                                 }
-                                // WHAT ABOUT THE CHILDREN???
+                                // all children need to be renamed since their
+                                // parent has a new id and that suffixes their
+                                // id
+                                // could refactor this to have the renameing based on
+                                // width happen in here
                                 fn rename_dfs(
                                     node_ref: &NodeKey,
                                     parent: &NodeKey,
                                     map: &mut BTreeMap<NodeKey, Node>,
                                 ) -> NodeKey {
+                                    // remove child from amp
                                     let mut node = map.remove(node_ref).unwrap();
                                     let (_, node_name) = node_ref.rsplit_once('/').unwrap();
+                                    // calc new name
                                     let newid = format!("{}/{}", parent, node_name,);
+                                    // inform links
                                     for link in &node.links {
                                         let linked = map.get_mut(link).unwrap();
                                         linked.rename_backlink(&node_ref, &newid);
@@ -332,20 +356,18 @@ impl Tree {
                                     }
                                     node.parent = Some(parent.to_string());
                                     node.id = newid.clone();
-                                    node.children = node
-                                        .children
-                                        .iter()
-                                        .map(|child_ref| rename_dfs(child_ref, &newid, map))
-                                        .collect();
+                                    for i in 0..node.children.borrow().len() {
+                                        node.children.borrow_mut()[i] =
+                                            rename_dfs(&node.children.borrow()[i], &newid, map)
+                                    }
                                     node.write_meta();
                                     map.insert(newid.clone(), node);
                                     newid
                                 }
-                                node_clone.children = node_clone
-                                    .children
-                                    .iter()
-                                    .map(|child_ref| rename_dfs(child_ref, &newid, &mut self.nodes))
-                                    .collect();
+                                for i in 0..node_clone.children.borrow().len() {
+                                    node_clone.children.borrow_mut()[i] =
+                                        rename_dfs(&node_clone.children.borrow()[i], &newid, &mut self.nodes)
+                                }
                                 self.nodes.insert(newid, node_clone);
                             }
                             commit_paths(
@@ -357,11 +379,6 @@ impl Tree {
                         }
                         None => {}
                     }
-                    for node_ref in &siblings {
-                        debug!("resetting siblings array for {:?}", node_ref);
-                        self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
-                    }
-                    self.nodes.get_mut(&parent_ref).unwrap().children = siblings;
                     Ok(child_id)
                 } else {
                     error!("problem");
@@ -378,7 +395,7 @@ impl Tree {
                     let (input, _) = tag("./codex/")(input)?;
                     take_till(|c| c == '/')(input)
                 }
-                let mut siblings = WalkDir::new(root)
+                let sibling_name = WalkDir::new(root)
                     .sort_by_file_name()
                     .contents_first(true)
                     .min_depth(2)
@@ -392,17 +409,14 @@ impl Tree {
                             .1
                             .to_string()
                     })
-                    .collect::<Vec<NodeKey>>();
-                debug!("{:?}", siblings);
+                    .next()
+                    .unwrap();
+                let sibling = self.nodes.get_mut(&sibling_name).unwrap();
                 let mut node = Node::create(node_name.to_string(), None);
-                siblings.push(node.id.clone());
-                node.siblings = siblings.clone();
+                sibling.siblings.borrow_mut().push(node.id.clone());
+                node.siblings = sibling.siblings.clone();
                 let node_id = node.id.clone();
-                self.nodes.insert(node.id.clone(), node);
-                debug!("{:?}", siblings);
-                for node_ref in &siblings {
-                    self.nodes.get_mut(node_ref).unwrap().siblings = siblings.clone();
-                }
+                self.nodes.insert(node_id.clone(), node);
                 Ok(node_id)
             }
             _ => {
