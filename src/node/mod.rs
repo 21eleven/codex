@@ -13,7 +13,6 @@ use crate::utils::commit_paths;
 use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
-use std::cell::RefCell;
 
 
 // type Datetime = DateTime<Local>;
@@ -52,8 +51,7 @@ pub struct Node {
     pub id: NodeKey,
     pub name: String,
     pub parent: Option<NodeKey>,
-    pub siblings: RefCell<Vec<NodeKey>>, // all siblings should have a pointer to the same vec // or HierarchicalIdentifiers?
-    pub children: RefCell<Vec<NodeKey>>, // parent has a point to it's children shared/sibling/family vec
+    pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
     pub links: HashSet<NodeKey>,
     pub backlinks: HashSet<NodeKey>,
     pub tags: HashSet<String>,
@@ -73,7 +71,6 @@ impl fmt::Display for Node {
                 None => "None",
             }
         )?;
-        write!(f, "\t siblings: {:?}\n", self.siblings)?;
         write!(f, "\t children: {:?}\n", self.children)?;
         write!(f, "\t links: {:?}\n", self.links)?;
         write!(f, "\t backlinks: {:?}\n", self.backlinks)?;
@@ -98,7 +95,7 @@ impl Node {
         let path_name = prepare_path_name(&name);
         let (node_key, parent_option) = match parent {
             Some(parent_node) => {
-                let sibling_num = parent_node.children.borrow().len() + 1;
+                let sibling_num = parent_node.children.len() + 1;
                 let node_key = format!("{}/{}-{}", parent_node.id, sibling_num, path_name);
                 (node_key, Some(parent_node.id.clone()))
             }
@@ -113,8 +110,7 @@ impl Node {
             id: node_key,
             name,
             parent: parent_option,
-            siblings: RefCell::new(vec![]),
-            children: RefCell::new(vec![]),
+            children: vec![],
             links: HashSet::new(),
             backlinks: HashSet::new(),
             tags: HashSet::new(),
@@ -155,8 +151,7 @@ impl Node {
         id: NodeKey,
         toml_path: &Path,
         parent: Option<NodeKey>,
-        siblings: RefCell<Vec<NodeKey>>,
-        children: RefCell<Vec<NodeKey>>,
+        children: Vec<NodeKey>,
     ) -> Node {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
@@ -164,7 +159,6 @@ impl Node {
             id,
             name,
             parent,
-            siblings,
             children,
             links: links.into_iter().map(|p| p.try_into().unwrap()).collect(),
             backlinks: backlinks
@@ -236,7 +230,7 @@ impl Node {
     }
     pub fn create_child(&mut self, name: String) -> Node {
         let child = Node::create(name, Some(&self));
-        self.children.borrow_mut().push(child.id.clone());
+        self.children.push(child.id.clone());
         child
     }
     fn tag(&mut self, new_tag: String) {
