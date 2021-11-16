@@ -9,6 +9,7 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
+use crate::utils::find_last_commit;
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -58,6 +59,17 @@ impl Handler for NeovimHandler {
                 // let today = tree.today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 on_start(neovim).await;
+            }
+            "diff" => {
+                let repo = self.repo.lock().unwrap();
+                let commit = find_last_commit(&repo).unwrap();
+                let diffs = repo
+                    .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
+                    .unwrap();
+
+                for diff in diffs.deltas() {
+                    log::debug!("Diff: {:?}", diff);
+                }
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
