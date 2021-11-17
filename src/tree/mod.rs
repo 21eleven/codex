@@ -154,26 +154,25 @@ impl Tree {
                 None => base.to_path_buf(),
                 Some(name_path) => base.join(PathBuf::from(name_path)),
             };
-            let children = 
-                WalkDir::new(search_dir)
-                    .sort_by_file_name()
-                    .contents_first(true)
-                    .min_depth(2)
-                    .max_depth(2)
-                    .into_iter()
-                    .map(|entry| entry.unwrap())
-                    .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
-                    .map(|e| {
-                        e.into_path()
-                            .parent()
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .chars()
-                            .skip(n)
-                            .collect::<String>()
-                    })
-                    .collect::<Vec<NodeKey>>();
+            let children = WalkDir::new(search_dir)
+                .sort_by_file_name()
+                .contents_first(true)
+                .min_depth(2)
+                .max_depth(2)
+                .into_iter()
+                .map(|entry| entry.unwrap())
+                .filter(|path| path.file_name().to_str().unwrap().ends_with("meta.toml"))
+                .map(|e| {
+                    e.into_path()
+                        .parent()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .chars()
+                        .skip(n)
+                        .collect::<String>()
+                })
+                .collect::<Vec<NodeKey>>();
             for node in children.iter() {
                 dfs(
                     Some(node.clone()),
@@ -223,8 +222,13 @@ impl Tree {
         let today = Local::now().format("%a %b %d %Y");
         let journal = self.journal.clone();
         let journal_node = self.nodes.get(&self.journal).unwrap();
-        let newest_child =
-            journal_node.children[journal_node.children.len() - 1].clone();
+        if journal_node.children.len() == 0 {
+            debug!("creating first day node: {}", &today);
+            return self
+                .create_node(Some(&journal), Some(&today.to_string()))
+                .unwrap();
+        }
+        let newest_child = journal_node.children[journal_node.children.len() - 1].clone();
         debug!(
             "newest child {} today {}",
             newest_child,
@@ -278,10 +282,8 @@ impl Tree {
                             // we must go to all the siblings and rename them
                             // TODO make this section more DRY
                             let repo = Repository::open("./").unwrap();
-                            let siblings = self
-                                .nodes
-                                .get_mut(&parent_ref)
-                                .unwrap().children.clone();
+                            let siblings =
+                                self.nodes.get_mut(&parent_ref).unwrap().children.clone();
                             for idx in 0..siblings.len() {
                                 if &siblings[idx] == &child_id {
                                     // the new nodes is named in the

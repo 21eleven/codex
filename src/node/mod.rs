@@ -14,7 +14,6 @@ use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
 
-
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
 //     codex_path: String

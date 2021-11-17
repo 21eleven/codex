@@ -56,7 +56,6 @@ impl Handler for NeovimHandler {
                 let repo = Repository::init("./").unwrap();
                 make_branch_and_checkout(&repo, &branch_name).unwrap();
 
-
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
                     None => {}
