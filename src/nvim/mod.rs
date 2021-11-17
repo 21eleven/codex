@@ -9,7 +9,7 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
-use crate::utils::find_last_commit;
+use crate::utils::{find_last_commit, make_branch_and_checkout};
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -51,6 +51,11 @@ impl Handler for NeovimHandler {
                 // log::debug!("tree on startup: {}", &tree);
                 // let yyyymmdd = Local::now().format("%Y%m%d");
                 let today = self.tree.lock().unwrap().today_node();
+                let branch_name = Local::now().format("%Y%m%d").to_string();
+                // let repo = self.repo.lock().unwrap();
+                let repo = Repository::init("./").unwrap();
+                make_branch_and_checkout(&repo, &branch_name).unwrap();
+
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
