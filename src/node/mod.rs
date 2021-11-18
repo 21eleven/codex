@@ -9,7 +9,7 @@ use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
-use crate::utils::commit_paths;
+use crate::git::commit_paths;
 use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
