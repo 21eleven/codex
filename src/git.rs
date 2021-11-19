@@ -2,6 +2,23 @@ use std::path::Path;
 
 use git2::{Commit, ObjectType, Repository};
 
+pub fn repo() -> Result<Repository, git2::Error> {
+    Ok(Repository::open("./")?)
+}
+
+pub fn stage_paths(paths: Vec<&Path>) -> Result<(), git2::Error> {
+    let repo = repo()?;
+    let mut index = repo.index()?;
+    index.add_all(paths, git2::IndexAddOption::DEFAULT, None)?;
+    index.write()?;
+    Ok(())
+}
+
+pub fn stage_all() -> Result<(), git2::Error> {
+    stage_paths(vec![Path::new("codex/*")])?;
+    Ok(())
+}
+
 pub fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
     // let head = repo.head().unwrap();
     // let oid = head.target().unwrap();

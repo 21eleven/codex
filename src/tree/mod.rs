@@ -1,5 +1,5 @@
 use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeMeta};
-use crate::utils::commit_paths;
+use crate::git::commit_paths;
 use chrono::Local;
 use git2::Repository;
 use log::*;

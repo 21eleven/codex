@@ -9,7 +9,7 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
-use crate::git::{find_last_commit, make_branch_and_checkout};
+use crate::git::{find_last_commit, make_branch_and_checkout, stage_all};
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -74,6 +74,9 @@ impl Handler for NeovimHandler {
                 for diff in diffs.deltas() {
                     log::debug!("Diff: {:?}", diff);
                 }
+            }
+            "stage" => {
+                stage_all().unwrap();
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
