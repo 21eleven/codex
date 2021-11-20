@@ -9,7 +9,7 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
-use crate::git::{find_last_commit, make_branch_and_checkout, stage_all};
+use crate::git::{repo, commit_all, find_last_commit, make_branch_and_checkout, stage_all};
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -45,6 +45,7 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
+                debug!("pwd: {:?}", std::env::current_dir().unwrap());
                 log::debug!("{:?}", self.repo.lock().unwrap().state());
                 // let tree = &mut *self.tree.lock().unwrap();
                 // why can't I do this?? ^^^^^^^^^^^^^^^^^^^
@@ -53,8 +54,9 @@ impl Handler for NeovimHandler {
                 let today = self.tree.lock().unwrap().today_node();
                 let branch_name = Local::now().format("%Y%m%d").to_string();
                 // let repo = self.repo.lock().unwrap();
-                let repo = Repository::init("./").unwrap();
-                make_branch_and_checkout(&repo, &branch_name).unwrap();
+                // let repo = Repository::init("./").unwrap();
+                // handle_git_branching();
+                // make_branch_and_checkout(&repo, &branch_name).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
@@ -77,6 +79,7 @@ impl Handler for NeovimHandler {
             }
             "stage" => {
                 stage_all().unwrap();
+                // commit_all(None).unwrap();
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
