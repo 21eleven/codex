@@ -9,7 +9,7 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::node::power_of_ten;
-use crate::git::{repo, commit_all, find_last_commit, make_branch_and_checkout, stage_all};
+use crate::git::{repo, commit_all, find_last_commit, get_last_commit_of_branch, make_branch_and_checkout, stage_all};
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -56,7 +56,7 @@ impl Handler for NeovimHandler {
                 // let repo = self.repo.lock().unwrap();
                 // let repo = Repository::init("./").unwrap();
                 // handle_git_branching();
-                // make_branch_and_checkout(&repo, &branch_name).unwrap();
+                // make_branch_and_checkout(&repo().unwrap(), &branch_name).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
@@ -71,7 +71,9 @@ impl Handler for NeovimHandler {
                 let commit = find_last_commit(&repo).unwrap();
                 let diffs = repo
                     .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
+                    // .diff_tree_to_workdir(None, None)
                     .unwrap();
+                debug!("n deltas: {}", diffs.deltas().len());
 
                 for diff in diffs.deltas() {
                     log::debug!("Diff: {:?}", diff);
@@ -80,6 +82,16 @@ impl Handler for NeovimHandler {
             "stage" => {
                 stage_all().unwrap();
                 // commit_all(None).unwrap();
+            }
+            "commit" => {
+                commit_all(None).unwrap();
+            }
+            "branch_commit" => {
+                let repo = repo().unwrap();
+                let branch_name = _args[0].as_str().unwrap();
+                let commit = get_last_commit_of_branch(&repo, branch_name);
+                debug!("{}: {:?}", branch_name, commit);
+                
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
@@ -99,7 +111,6 @@ impl Handler for NeovimHandler {
                             args_s.replace('"', "\\\"")
                         );
                         neovim.command(s.as_str()).await.unwrap();
-                        dbg!(count);
                         count += 1;
                     }
                 });

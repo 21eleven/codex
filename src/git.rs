@@ -44,6 +44,12 @@ pub fn make_branch_and_checkout(repo: &Repository, branch_name: &str) -> Result<
     Ok(())
 }
 
+pub fn get_last_commit_of_branch<'repo>(
+    repo: &'repo Repository, branch_name: &str) -> Result<Commit<'repo>, git2::Error> {
+
+    repo.revparse_single(&("refs/heads/".to_owned()+branch_name))?.peel_to_commit()
+}
+
 pub fn commit_paths(
     repo: &Repository,
     paths: Vec<&Path>,
@@ -104,3 +110,24 @@ pub fn commit_staged(message: Option<&str>) -> Result<(), git2::Error> {
     )?;
     Ok(())
 }
+fn repo_has_uncommitted_changes(repo: &Repository) -> Result<bool, git2::Error> {
+    let last_commit = find_last_commit(&repo).unwrap();
+    Ok(repo.diff_tree_to_workdir(Some(&last_commit.tree()?), None)?.deltas().len() != 0)
+
+}
+
+pub fn handle_git_branching() -> Result<(), git2::Error> {
+    let repo = repo()?;
+    if repo_has_uncommitted_changes(&repo)? {}
+
+    Ok(())
+}
+
+
+
+
+
+
+
+
+
