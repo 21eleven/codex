@@ -10,8 +10,8 @@ pub fn repo() -> Result<Repository, git2::Error> {
 }
 
 pub fn stage_paths(paths: Vec<&Path>) -> Result<(), git2::Error> {
-    // let repo = repo()?;
-    let mut index = repo()?.index()?;
+    let repo = repo()?;
+    let mut index = repo.index()?;
     index.add_all(paths, git2::IndexAddOption::DEFAULT, None)?;
     index.write()?;
     Ok(())
