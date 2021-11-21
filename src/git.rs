@@ -2,7 +2,7 @@ use std::path::Path;
 
 use git2::{Commit, ObjectType, Repository};
 
-static DEFAULT_COMMIT_MSG: &str = ".";  // what should be the default message???
+static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
 
 pub fn repo() -> Result<Repository, git2::Error> {
@@ -44,10 +44,23 @@ pub fn make_branch_and_checkout(repo: &Repository, branch_name: &str) -> Result<
     Ok(())
 }
 
-pub fn get_last_commit_of_branch<'repo>(
-    repo: &'repo Repository, branch_name: &str) -> Result<Commit<'repo>, git2::Error> {
+fn checkout_branch(repo: &Repository, branch_name: &str) -> Result<(), git2::Error> {
+    let obj = repo
+        .revparse_single(&("refs/heads/".to_owned() + branch_name))
+        .unwrap();
 
-    repo.revparse_single(&("refs/heads/".to_owned()+branch_name))?.peel_to_commit()
+    repo.checkout_tree(&obj, None)?;
+
+    repo.set_head(&("refs/heads/".to_owned() + branch_name))?;
+    Ok(())
+}
+
+pub fn get_last_commit_of_branch<'repo>(
+    repo: &'repo Repository,
+    branch_name: &str,
+) -> Result<Commit<'repo>, git2::Error> {
+    repo.revparse_single(&("refs/heads/".to_owned() + branch_name))?
+        .peel_to_commit()
 }
 
 pub fn commit_paths(
@@ -112,22 +125,49 @@ pub fn commit_staged(message: Option<&str>) -> Result<(), git2::Error> {
 }
 fn repo_has_uncommitted_changes(repo: &Repository) -> Result<bool, git2::Error> {
     let last_commit = find_last_commit(&repo).unwrap();
-    Ok(repo.diff_tree_to_workdir(Some(&last_commit.tree()?), None)?.deltas().len() != 0)
-
+    Ok(repo
+        .diff_tree_to_workdir(Some(&last_commit.tree()?), None)?
+        .deltas()
+        .len()
+        != 0)
 }
 
 pub fn handle_git_branching() -> Result<(), git2::Error> {
     let repo = repo()?;
-    if repo_has_uncommitted_changes(&repo)? {}
+    if repo_has_uncommitted_changes(&repo)? {
+        commit_all(None)?;
+    }
+    // what if current branch is main? shouldn't be ever yea?
+    let last_commit = find_last_commit(&repo)?;
+    let main_commit = get_last_commit_of_branch(&repo, "main")?;
+
+
+    if last_commit.id() != main_commit.id() {
+        checkout_branch(&repo, "main")?;
+        let main = repo.find_annotated_commit(main_commit.id())?;
+        let other = repo.find_annotated_commit(last_commit.id())?;
+        let main_tree = repo.find_commit(main.id())?.tree()?;
+        let other_tree = repo.find_commit(other.id())?.tree()?;
+        let ancestor = repo
+            .find_commit(repo.merge_base(main.id(), other.id())?)?
+            .tree()?;
+        let mut idx = repo.merge_trees(&ancestor, &main_tree, &other_tree, None)?;
+        // let mut idx = repo.merge_commits(&main_commit, &last_commit, None)?;
+        let result_tree = repo.find_tree(idx.write_tree_to(&repo)?)?;
+        repo.checkout_index(Some(&mut idx), None)?;
+        // let sig = repo.signature()?;
+        // // Do our merge commit and set current branch head to that commit.
+        // let _merge_commit = repo.commit(
+        //     Some("HEAD"),
+        //     &sig,
+        //     &sig,
+        //     "merge day branch into main",
+        //     &result_tree,
+        //     &[&main_commit, &last_commit],
+        // )?;
+        // // Set working tree to match head.
+        // repo.checkout_head(None)?;
+    }
 
     Ok(())
 }
-
-
-
-
-
-
-
-
-

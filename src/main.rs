@@ -7,10 +7,10 @@ use std::error::Error;
 use std::sync::Arc;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use std::sync::Mutex;
+mod git;
 mod node;
 mod nvim;
 mod tree;
-mod git;
 
 use node::init_codex_repo;
 use nvim::NeovimHandler;

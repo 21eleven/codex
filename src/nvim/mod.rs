@@ -8,8 +8,11 @@ use crate::tree;
 use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
+use crate::git::{
+    commit_all, find_last_commit, get_last_commit_of_branch, handle_git_branching,
+    make_branch_and_checkout, repo, stage_all,
+};
 use crate::node::power_of_ten;
-use crate::git::{repo, commit_all, find_last_commit, get_last_commit_of_branch, make_branch_and_checkout, stage_all};
 use rmpv::Value;
 use std::env;
 use std::path::PathBuf;
@@ -55,7 +58,7 @@ impl Handler for NeovimHandler {
                 let branch_name = Local::now().format("%Y%m%d").to_string();
                 // let repo = self.repo.lock().unwrap();
                 // let repo = Repository::init("./").unwrap();
-                // handle_git_branching();
+                handle_git_branching();
                 // make_branch_and_checkout(&repo().unwrap(), &branch_name).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
@@ -91,7 +94,6 @@ impl Handler for NeovimHandler {
                 let branch_name = _args[0].as_str().unwrap();
                 let commit = get_last_commit_of_branch(&repo, branch_name);
                 debug!("{}: {:?}", branch_name, commit);
-                
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
