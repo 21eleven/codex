@@ -155,7 +155,15 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
         // let mut idx = repo.merge_commits(&main_commit, &last_commit, None)?;
         let result_tree = repo.find_tree(idx.write_tree_to(&repo)?)?;
         repo.checkout_index(Some(&mut idx), None)?;
-        // let sig = repo.signature()?;
+        let sig = repo.signature()?;
+        let _merge_commit = repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "merge day branch into main",
+            &result_tree,
+            &[&main_commit, &last_commit],
+        )?;
         // // Do our merge commit and set current branch head to that commit.
         // let _merge_commit = repo.commit(
         //     Some("HEAD"),
@@ -168,6 +176,5 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
         // // Set working tree to match head.
         // repo.checkout_head(None)?;
     }
-
     Ok(())
 }

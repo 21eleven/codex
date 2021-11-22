@@ -58,7 +58,7 @@ impl Handler for NeovimHandler {
                 let branch_name = Local::now().format("%Y%m%d").to_string();
                 // let repo = self.repo.lock().unwrap();
                 // let repo = Repository::init("./").unwrap();
-                handle_git_branching();
+                handle_git_branching().unwrap();
                 // make_branch_and_checkout(&repo().unwrap(), &branch_name).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
