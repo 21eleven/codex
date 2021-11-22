@@ -1,4 +1,6 @@
 use std::path::Path;
+use chrono::Local;
+use log::*;
 
 use git2::{Commit, ObjectType, Repository};
 
@@ -134,47 +136,45 @@ fn repo_has_uncommitted_changes(repo: &Repository) -> Result<bool, git2::Error> 
 
 pub fn handle_git_branching() -> Result<(), git2::Error> {
     let repo = repo()?;
-    if repo_has_uncommitted_changes(&repo)? {
-        commit_all(None)?;
-    }
-    // what if current branch is main? shouldn't be ever yea?
-    let last_commit = find_last_commit(&repo)?;
-    let main_commit = get_last_commit_of_branch(&repo, "main")?;
+    let today_branch_name = Local::now().format("%Y%m%d").to_string();
+    let current_branch = repo.head()?.name().unwrap_or("").to_string();
+
+    if &current_branch != &format!("refs/heads/{}", today_branch_name) {
+        if repo_has_uncommitted_changes(&repo)? {
+            commit_all(None)?;
+        }
+        // what if current branch is main? shouldn't be ever yea?
+        let last_commit = find_last_commit(&repo)?;
+        let main_commit = get_last_commit_of_branch(&repo, "main")?;
 
 
-    if last_commit.id() != main_commit.id() {
-        checkout_branch(&repo, "main")?;
-        let main = repo.find_annotated_commit(main_commit.id())?;
-        let other = repo.find_annotated_commit(last_commit.id())?;
-        let main_tree = repo.find_commit(main.id())?.tree()?;
-        let other_tree = repo.find_commit(other.id())?.tree()?;
-        let ancestor = repo
-            .find_commit(repo.merge_base(main.id(), other.id())?)?
-            .tree()?;
-        let mut idx = repo.merge_trees(&ancestor, &main_tree, &other_tree, None)?;
-        // let mut idx = repo.merge_commits(&main_commit, &last_commit, None)?;
-        let result_tree = repo.find_tree(idx.write_tree_to(&repo)?)?;
-        repo.checkout_index(Some(&mut idx), None)?;
-        let sig = repo.signature()?;
-        let _merge_commit = repo.commit(
-            Some("HEAD"),
-            &sig,
-            &sig,
-            "merge day branch into main",
-            &result_tree,
-            &[&main_commit, &last_commit],
-        )?;
-        // // Do our merge commit and set current branch head to that commit.
-        // let _merge_commit = repo.commit(
-        //     Some("HEAD"),
-        //     &sig,
-        //     &sig,
-        //     "merge day branch into main",
-        //     &result_tree,
-        //     &[&main_commit, &last_commit],
-        // )?;
-        // // Set working tree to match head.
-        // repo.checkout_head(None)?;
+        if last_commit.id() != main_commit.id() {
+            checkout_branch(&repo, "main")?;
+            let main = repo.find_annotated_commit(main_commit.id())?;
+            let other = repo.find_annotated_commit(last_commit.id())?;
+            let main_tree = repo.find_commit(main.id())?.tree()?;
+            let other_tree = repo.find_commit(other.id())?.tree()?;
+            let ancestor = repo
+                .find_commit(repo.merge_base(main.id(), other.id())?)?
+                .tree()?;
+            let mut idx = repo.merge_trees(&ancestor, &main_tree, &other_tree, None)?;
+            // let mut idx = repo.merge_commits(&main_commit, &last_commit, None)?;
+            let result_tree = repo.find_tree(idx.write_tree_to(&repo)?)?;
+            repo.checkout_index(Some(&mut idx), None)?;
+            let sig = repo.signature()?;
+            let _merge_commit = repo.commit(
+                Some("HEAD"),
+                &sig,
+                &sig,
+                "merge day branch into main",
+                &result_tree,
+                &[&main_commit, &last_commit],
+            )?;
+        }
+        make_branch_and_checkout(&repo, &today_branch_name)?;
+
+    } else {
+        debug!("staying on branch: {}", &current_branch);
     }
     Ok(())
 }

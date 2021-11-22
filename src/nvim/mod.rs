@@ -50,16 +50,8 @@ impl Handler for NeovimHandler {
                 log::debug!("starting CODEX!");
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
                 log::debug!("{:?}", self.repo.lock().unwrap().state());
-                // let tree = &mut *self.tree.lock().unwrap();
-                // why can't I do this?? ^^^^^^^^^^^^^^^^^^^
-                // log::debug!("tree on startup: {}", &tree);
-                // let yyyymmdd = Local::now().format("%Y%m%d");
                 let today = self.tree.lock().unwrap().today_node();
-                let branch_name = Local::now().format("%Y%m%d").to_string();
-                // let repo = self.repo.lock().unwrap();
-                // let repo = Repository::init("./").unwrap();
                 handle_git_branching().unwrap();
-                // make_branch_and_checkout(&repo().unwrap(), &branch_name).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
