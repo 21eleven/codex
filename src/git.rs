@@ -150,6 +150,7 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
 
         if last_commit.id() != main_commit.id() {
             checkout_branch(&repo, "main")?;
+            // do i need to find annotated commits?
             let main = repo.find_annotated_commit(main_commit.id())?;
             let other = repo.find_annotated_commit(last_commit.id())?;
             let main_tree = repo.find_commit(main.id())?.tree()?;
@@ -166,7 +167,7 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
                 Some("HEAD"),
                 &sig,
                 &sig,
-                "merge day branch into main",
+                &format!("merge day branch {} into main", current_branch),
                 &result_tree,
                 &[&main_commit, &last_commit],
             )?;
@@ -178,3 +179,9 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
     }
     Ok(())
 }
+
+pub fn get_branch_diff() -> String {
+    todo!();
+}
+
+pub fn get_diff_word_count() -> u64 { todo!(); }
