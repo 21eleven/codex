@@ -1,8 +1,8 @@
-use std::path::Path;
 use chrono::Local;
 use log::*;
+use std::path::Path;
 
-use git2::{Commit, ObjectType, Repository};
+use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, ObjectType, Repository};
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
@@ -147,7 +147,6 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
         let last_commit = find_last_commit(&repo)?;
         let main_commit = get_last_commit_of_branch(&repo, "main")?;
 
-
         if last_commit.id() != main_commit.id() {
             checkout_branch(&repo, "main")?;
             // do i need to find annotated commits?
@@ -173,15 +172,34 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
             )?;
         }
         make_branch_and_checkout(&repo, &today_branch_name)?;
-
     } else {
         debug!("staying on branch: {}", &current_branch);
     }
     Ok(())
 }
 
+pub fn capture_diff_line(
+    delta: DiffDelta,
+    hunk: Option<DiffHunk>,
+    line: DiffLine,
+    lines: &mut Vec<String>,
+    print: bool,
+) -> bool {
+    if print {
+        debug!("delta: {:?}", delta);
+        debug!("hunk: {:?}", hunk);
+        debug!("line: {:?}", line);
+    }
+
+    let content = String::from(std::str::from_utf8(line.content()).unwrap());
+    lines.push(content);
+    true
+}
+
 pub fn get_branch_diff() -> String {
     todo!();
 }
 
-pub fn get_diff_word_count() -> u64 { todo!(); }
+pub fn get_diff_word_count() -> u64 {
+    todo!();
+}

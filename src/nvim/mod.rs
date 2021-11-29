@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use git2::Repository;
+use git2::{DiffFormat, Repository};
 use log::*;
 use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
 use std::sync::Arc;
@@ -9,8 +9,8 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
-    commit_all, find_last_commit, get_last_commit_of_branch, handle_git_branching,
-    make_branch_and_checkout, repo, stage_all,
+    capture_diff_line, commit_all, find_last_commit, get_last_commit_of_branch,
+    handle_git_branching, make_branch_and_checkout, repo, stage_all,
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -73,6 +73,13 @@ impl Handler for NeovimHandler {
                 for diff in diffs.deltas() {
                     log::debug!("Diff: {:?}", diff);
                 }
+                let mut lines: Vec<String> = vec![];
+                diffs
+                    .print(DiffFormat::Patch, |d, h, l| {
+                        capture_diff_line(d, h, l, &mut lines, true)
+                    })
+                    .unwrap();
+                debug!("/difflines/ {:?}", lines);
             }
             "stage" => {
                 stage_all().unwrap();
