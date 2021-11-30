@@ -178,6 +178,22 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
     Ok(())
 }
 
+pub fn get_ancestor_with_main_branch<'repo>(
+    repo: &'repo Repository,
+) -> Result<Commit<'repo>, git2::Error> {
+    // Ok i should make this module have a 
+    // Repo struct and some helper functions
+    // any func that takes repo should go on 
+    // the Repo struct which will wrap
+    // git2::Repository
+    let last_commit = find_last_commit(&repo)?;
+    let main_commit = get_last_commit_of_branch(&repo, "main")?;
+    // do i need to find annotated commits?
+    let main = repo.find_annotated_commit(main_commit.id())?;
+    let other = repo.find_annotated_commit(last_commit.id())?;
+    Ok(repo.find_commit(repo.merge_base(main.id(), other.id())?)?)
+}
+
 pub fn capture_diff_line(
     delta: DiffDelta,
     hunk: Option<DiffHunk>,

@@ -10,7 +10,7 @@ use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
     capture_diff_line, commit_all, find_last_commit, get_last_commit_of_branch,
-    handle_git_branching, make_branch_and_checkout, repo, stage_all,
+    handle_git_branching, make_branch_and_checkout, repo, stage_all, get_ancestor_with_main_branch
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -63,7 +63,8 @@ impl Handler for NeovimHandler {
             }
             "diff" => {
                 let repo = self.repo.lock().unwrap();
-                let commit = find_last_commit(&repo).unwrap();
+                // let commit = find_last_commit(&repo).unwrap();
+                let commit = get_ancestor_with_main_branch(&repo).unwrap();
                 let diffs = repo
                     .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
                     // .diff_tree_to_workdir(None, None)
