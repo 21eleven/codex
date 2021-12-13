@@ -72,12 +72,33 @@ impl Handler for NeovimHandler {
                 debug!("n deltas: {}", diffs.deltas().len());
 
                 for diff in diffs.deltas() {
-                    log::debug!("Diff: {:?}", diff);
+                    // log::debug!("Diff: {:?}", diff);
                 }
                 let mut lines: Vec<String> = vec![];
                 diffs
                     .print(DiffFormat::Patch, |d, h, l| {
-                        capture_diff_line(d, h, l, &mut lines, true)
+                        capture_diff_line(d, h, l, &mut lines, false)
+                    })
+                    .unwrap();
+                debug!("/difflines/ {:?}", lines);
+            }
+            "diff_last" => {
+                let repo = self.repo.lock().unwrap();
+                let commit = find_last_commit(&repo).unwrap();
+                // let commit = get_ancestor_with_main_branch(&repo).unwrap();
+                let diffs = repo
+                    .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
+                    // .diff_tree_to_workdir(None, None)
+                    .unwrap();
+                debug!("n deltas: {}", diffs.deltas().len());
+
+                for diff in diffs.deltas() {
+                    // log::debug!("Diff: {:?}", diff);
+                }
+                let mut lines: Vec<String> = vec![];
+                diffs
+                    .print(DiffFormat::Patch, |d, h, l| {
+                        capture_diff_line(d, h, l, &mut lines, false)
                     })
                     .unwrap();
                 debug!("/difflines/ {:?}", lines);
