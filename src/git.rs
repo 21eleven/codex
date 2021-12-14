@@ -2,7 +2,7 @@ use chrono::Local;
 use log::*;
 use std::path::Path;
 
-use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, ObjectType, Repository};
+use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Repository};
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
@@ -218,4 +218,22 @@ pub fn get_branch_diff() -> String {
 
 pub fn get_diff_word_count() -> u64 {
     todo!();
+}
+pub fn diff_w_last_commit() -> Result<(), git2::Error> {
+    let repo = repo()?;
+    let commit = find_last_commit(&repo).unwrap();
+    diff_w_commit(&repo, &commit)?;
+
+    Ok(())
+}
+
+pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<(), git2::Error> {
+    // let commit = get_ancestor_with_main_branch(&repo).unwrap();
+    let mut opts = DiffOptions::new();
+    opts.patience(true);
+    let diffs = repo
+        .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
+        .unwrap();
+
+    Ok(())
 }
