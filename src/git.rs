@@ -276,6 +276,14 @@ pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<(), git2::Err
     let diffs = repo
         .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
         .unwrap();
+    debug!("n deltas: {}", diffs.deltas().len());
+    let mut lines: Vec<String> = vec![];
+    diffs
+        .print(DiffFormat::Patch, |d, h, l| {
+            capture_diff_line(d, h, l, &mut lines, true)
+        })
+        .unwrap();
+    debug!("/difflines/ {:?}", lines);
 
     Ok(())
 }

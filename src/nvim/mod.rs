@@ -10,7 +10,7 @@ use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
     capture_diff_line, commit_all, find_last_commit, get_last_commit_of_branch,
-    handle_git_branching, make_branch_and_checkout, repo, stage_all, get_ancestor_with_main_branch
+    handle_git_branching, make_branch_and_checkout, repo, stage_all, get_ancestor_with_main_branch, diff_w_last_commit
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -71,9 +71,6 @@ impl Handler for NeovimHandler {
                     .unwrap();
                 debug!("n deltas: {}", diffs.deltas().len());
 
-                for diff in diffs.deltas() {
-                    // log::debug!("Diff: {:?}", diff);
-                }
                 let mut lines: Vec<String> = vec![];
                 diffs
                     .print(DiffFormat::Patch, |d, h, l| {
@@ -83,25 +80,7 @@ impl Handler for NeovimHandler {
                 debug!("/difflines/ {:?}", lines);
             }
             "diff_last" => {
-                let repo = self.repo.lock().unwrap();
-                let commit = find_last_commit(&repo).unwrap();
-                // let commit = get_ancestor_with_main_branch(&repo).unwrap();
-                let diffs = repo
-                    .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
-                    // .diff_tree_to_workdir(None, None)
-                    .unwrap();
-                debug!("n deltas: {}", diffs.deltas().len());
-
-                for diff in diffs.deltas() {
-                    // log::debug!("Diff: {:?}", diff);
-                }
-                let mut lines: Vec<String> = vec![];
-                diffs
-                    .print(DiffFormat::Patch, |d, h, l| {
-                        capture_diff_line(d, h, l, &mut lines, false)
-                    })
-                    .unwrap();
-                debug!("/difflines/ {:?}", lines);
+                diff_w_last_commit().unwrap();
             }
             "stage" => {
                 stage_all().unwrap();
