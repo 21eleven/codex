@@ -1,8 +1,9 @@
 use chrono::Local;
 use log::*;
 use std::path::Path;
+use std::collections::HashMap;
 
-use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Repository};
+use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, Oid, ObjectType, Repository};
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
@@ -194,6 +195,36 @@ pub fn get_ancestor_with_main_branch<'repo>(
     Ok(repo.find_commit(repo.merge_base(main.id(), other.id())?)?)
 }
 
+pub struct DiffWords {
+    words: HashMap<String, i32>
+} 
+
+impl DiffWords {
+    fn new() ->Self {
+        DiffWords { words: HashMap::new() }
+    }
+    fn insert(&mut self, line: DiffLine) {
+        let delta = match line.origin() {
+            '+' => 1,
+            '-' => -1,
+            _ => return,
+        };
+        match std::str::from_utf8(line.content()) {
+            Ok(content) => {
+                for word in content.split_whitespace() {
+                    *self.words.entry(word.to_string()).or_insert(0) += delta;
+                }
+            }
+            Err(e) => {
+                error!("Error parsing git file content bytes to utf8 str\n{:?}", e);
+            }
+        }
+    }
+    fn words_added(&self) ->u64 {
+        self.words.values().map(|x| if x < &0 {0} else {*x}).sum::<i32>() as u64
+    }
+}
+
 pub fn capture_diff_line(
     delta: DiffDelta,
     hunk: Option<DiffHunk>,
@@ -201,13 +232,24 @@ pub fn capture_diff_line(
     lines: &mut Vec<String>,
     print: bool,
 ) -> bool {
+    let content = String::from(std::str::from_utf8(line.content()).unwrap());
     if print {
-        debug!("delta: {:?}", delta);
-        debug!("hunk: {:?}", hunk);
-        debug!("line: {:?}", line);
+        // debug!("delta: {:?}", delta);
+        // debug!("hunk: {:?}", hunk);
+        // match hunk {
+        //     Some(h) => {
+        //         debug!("Hunk:\n{:?}",String::from(std::str::from_utf8(h.header()).unwrap()) );
+        //     }
+        //     None => {}
+        // }
+        match line.origin() {
+            '+'|'-' => {
+                debug!("line: [{}] {:?}", line.origin(), content);
+            }
+            _ => {}
+        }
     }
 
-    let content = String::from(std::str::from_utf8(line.content()).unwrap());
     lines.push(content);
     true
 }
