@@ -71,13 +71,15 @@ impl Handler for NeovimHandler {
                     .unwrap();
                 debug!("n deltas: {}", diffs.deltas().len());
 
-                let mut lines: Vec<String> = vec![];
+                // let mut lines: Vec<String> = vec![];
+                let mut lines = crate::git::DiffWords::new();
                 diffs
                     .print(DiffFormat::Patch, |d, h, l| {
                         capture_diff_line(d, h, l, &mut lines, false)
                     })
                     .unwrap();
                 debug!("/difflines/ {:?}", lines);
+                lines.diff();
             }
             "diff_last" => {
                 diff_w_last_commit().unwrap();
