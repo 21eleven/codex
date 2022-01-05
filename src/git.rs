@@ -1,5 +1,6 @@
 use chrono::Local;
 use log::*;
+use std::str;
 use std::path::Path;
 use std::collections::HashMap;
 
@@ -195,33 +196,47 @@ pub fn get_ancestor_with_main_branch<'repo>(
     Ok(repo.find_commit(repo.merge_base(main.id(), other.id())?)?)
 }
 
+#[derive(Debug)]
 pub struct DiffWords {
-    words: HashMap<String, i32>
+    words: HashMap<(Oid, Oid), (Vec<String>, Vec<String>)>
 } 
 
 impl DiffWords {
-    fn new() ->Self {
+    pub fn new() ->Self {
         DiffWords { words: HashMap::new() }
     }
-    fn insert(&mut self, line: DiffLine) {
-        let delta = match line.origin() {
-            '+' => 1,
-            '-' => -1,
-            _ => return,
-        };
-        match std::str::from_utf8(line.content()) {
-            Ok(content) => {
-                for word in content.split_whitespace() {
-                    *self.words.entry(word.to_string()).or_insert(0) += delta;
+    pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
+        let key = (delta.old_file().id(), delta.new_file().id());
+        match line.origin() {
+            '+' => {
+                for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
+                    self.words.entry(key)
+                        .or_insert((vec![], vec![]))
+                        .1.push(String::from(word));
                 }
             }
-            Err(e) => {
-                error!("Error parsing git file content bytes to utf8 str\n{:?}", e);
+            '-' => {
+                for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
+                    self.words.entry(key)
+                        .or_insert((vec![], vec![]))
+                        .0.push(String::from(word));
+                }
             }
+            _ => {}
         }
     }
-    fn words_added(&self) ->u64 {
-        self.words.values().map(|x| if x < &0 {0} else {*x}).sum::<i32>() as u64
+    pub fn diff(&mut self) {
+        for (left, right) in self.words.values() {
+            for result in lcs_diff::diff(left, right) {
+                match result {
+                    lcs_diff::DiffResult::Added(w) => {
+                        debug!("[+] {:?}", w.data);
+                    }
+                    _ => {}
+                }
+            }
+
+        }
     }
 }
 
@@ -229,10 +244,11 @@ pub fn capture_diff_line(
     delta: DiffDelta,
     hunk: Option<DiffHunk>,
     line: DiffLine,
-    lines: &mut Vec<String>,
+    // lines: &mut Vec<String>,
+    diff: &mut DiffWords,
     print: bool,
 ) -> bool {
-    let content = String::from(std::str::from_utf8(line.content()).unwrap());
+    let content = String::from(str::from_utf8(line.content()).unwrap());
     if print {
         // debug!("delta: {:?}", delta);
         // debug!("hunk: {:?}", hunk);
@@ -250,7 +266,9 @@ pub fn capture_diff_line(
         }
     }
 
-    lines.push(content);
+    // lines.push(content);
+    diff.insert(delta, line);
+
     true
 }
 
@@ -277,13 +295,15 @@ pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<(), git2::Err
         .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
         .unwrap();
     debug!("n deltas: {}", diffs.deltas().len());
-    let mut lines: Vec<String> = vec![];
+    // let mut lines: Vec<String> = vec![];
+    let mut lines = DiffWords::new();
     diffs
         .print(DiffFormat::Patch, |d, h, l| {
             capture_diff_line(d, h, l, &mut lines, true)
         })
         .unwrap();
     debug!("/difflines/ {:?}", lines);
+    lines.diff();
 
     Ok(())
 }
