@@ -9,8 +9,8 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
-    commit_all, get_last_commit_of_branch,
-    handle_git_branching, repo, stage_all, diff_w_last_commit, diff_w_main
+    commit_all, diff_w_last_commit, diff_w_last_commit_report, diff_w_main, diff_w_main_report,
+    get_last_commit_of_branch, handle_git_branching, repo, stage_all,
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -68,6 +68,14 @@ impl Handler for NeovimHandler {
             "diff_last" => {
                 let added = diff_w_last_commit().unwrap();
                 debug!("words added (vs prev commit): {}", added);
+            }
+            "diff_report" => {
+                let report = diff_w_main_report().unwrap();
+                debug!("Diff Report (vs main): \n{}", report);
+            }
+            "diff_last_report" => {
+                let report = diff_w_last_commit_report().unwrap();
+                debug!("Diff Report (vs last commit): \n{}", report);
             }
             "stage" => {
                 stage_all().unwrap();
