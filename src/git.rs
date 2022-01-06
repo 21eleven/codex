@@ -1,10 +1,13 @@
 use chrono::Local;
 use log::*;
-use std::str;
-use std::path::Path;
 use std::collections::{BTreeMap, HashMap};
+use std::path::Path;
+use std::str;
 
-use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, Oid, ObjectType, Repository};
+use git2::{
+    Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Oid,
+    Repository,
+};
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
@@ -183,9 +186,9 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
 pub fn get_ancestor_with_main_branch<'repo>(
     repo: &'repo Repository,
 ) -> Result<Commit<'repo>, git2::Error> {
-    // Ok i should make this module have a 
+    // Ok i should make this module have a
     // Repo struct and some helper functions
-    // any func that takes repo should go on 
+    // any func that takes repo should go on
     // the Repo struct which will wrap
     // git2::Repository
     let last_commit = find_last_commit(&repo)?;
@@ -198,28 +201,34 @@ pub fn get_ancestor_with_main_branch<'repo>(
 
 #[derive(Debug)]
 pub struct DiffWords {
-    words: HashMap<(Oid, Oid), (Vec<String>, Vec<String>)>
-} 
+    words: HashMap<(Oid, Oid), (Vec<String>, Vec<String>)>,
+}
 
 impl DiffWords {
-    pub fn new() ->Self {
-        DiffWords { words: HashMap::new() }
+    pub fn new() -> Self {
+        DiffWords {
+            words: HashMap::new(),
+        }
     }
     pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
         let key = (delta.old_file().id(), delta.new_file().id());
         match line.origin() {
             '+' => {
                 for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
-                    self.words.entry(key)
+                    self.words
+                        .entry(key)
                         .or_insert((vec![], vec![]))
-                        .1.push(String::from(word));
+                        .1
+                        .push(String::from(word));
                 }
             }
             '-' => {
                 for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
-                    self.words.entry(key)
+                    self.words
+                        .entry(key)
                         .or_insert((vec![], vec![]))
-                        .0.push(String::from(word));
+                        .0
+                        .push(String::from(word));
                 }
             }
             _ => {}
@@ -261,7 +270,7 @@ pub fn capture_diff_line(
         //     None => {}
         // }
         match line.origin() {
-            '+'|'-' => {
+            '+' | '-' => {
                 debug!("line: [{}] {:?}", line.origin(), content);
             }
             _ => {}
@@ -273,7 +282,7 @@ pub fn capture_diff_line(
     true
 }
 
-pub fn diff_w_main() -> Result<u64, git2::Error>{
+pub fn diff_w_main() -> Result<u64, git2::Error> {
     let repo = repo()?;
     let commit = get_ancestor_with_main_branch(&repo).unwrap();
     diff_w_commit(&repo, &commit)
@@ -300,25 +309,25 @@ pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<u64, git2::Er
         .unwrap();
     debug!("/difflines/ {:?}", word_diff);
     Ok(word_diff.diff_words_added())
-
 }
 
 struct DiffReport {
-    lines: BTreeMap<String, String>
+    lines: BTreeMap<String, Vec<String>>,
 }
 
 impl DiffReport {
     pub fn new() -> Self {
-        Self { lines: BTreeMap::new() }
+        Self {
+            lines: BTreeMap::new(),
+        }
     }
     pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
         match line.origin() {
             '+' => {
                 let content = String::from(str::from_utf8(line.content()).unwrap());
-                let key = String::from(delta.new_file()
-                                       .path().unwrap()
-                                       .to_str().unwrap());
-                self.lines.insert(key, content);
+                debug!("content line: {:?}", content);
+                let key = String::from(delta.new_file().path().unwrap().to_str().unwrap());
+                self.lines.entry(key).or_insert(vec![]).push(content);
             }
             _ => {}
         }
@@ -326,12 +335,11 @@ impl DiffReport {
     pub fn report(&self) -> String {
         let mut output = vec![];
         for (filepath, content) in self.lines.iter() {
-            output.push(filepath.clone());
-            output.push(content.clone());
+            output.push(format!("/// {} ///", filepath.clone()));
+            output.push(content.join(""));
         }
         output.join("\n")
     }
-
 }
 
 pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::Error> {
@@ -350,7 +358,7 @@ pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::E
     Ok(report.report())
 }
 
-pub fn diff_w_main_report() -> Result<String, git2::Error>{
+pub fn diff_w_main_report() -> Result<String, git2::Error> {
     let repo = repo()?;
     let commit = get_ancestor_with_main_branch(&repo).unwrap();
     diff_report(&repo, &commit)
