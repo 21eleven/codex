@@ -225,18 +225,20 @@ impl DiffWords {
             _ => {}
         }
     }
-    pub fn diff(&mut self) {
+    pub fn diff_words_added(&mut self) -> u64 {
+        let mut added = 0;
         for (left, right) in self.words.values() {
             for result in lcs_diff::diff(left, right) {
                 match result {
                     lcs_diff::DiffResult::Added(w) => {
                         debug!("[+] {:?}", w.data);
+                        added += 1;
                     }
                     _ => {}
                 }
             }
-
         }
+        added
     }
 }
 
@@ -266,44 +268,38 @@ pub fn capture_diff_line(
         }
     }
 
-    // lines.push(content);
     diff.insert(delta, line);
 
     true
 }
 
-pub fn get_branch_diff() -> String {
-    todo!();
+pub fn diff_w_main() -> Result<u64, git2::Error>{
+    let repo = repo()?;
+    let commit = get_ancestor_with_main_branch(&repo).unwrap();
+    diff_w_commit(&repo, &commit)
 }
 
-pub fn get_diff_word_count() -> u64 {
-    todo!();
-}
-pub fn diff_w_last_commit() -> Result<(), git2::Error> {
+pub fn diff_w_last_commit() -> Result<u64, git2::Error> {
     let repo = repo()?;
     let commit = find_last_commit(&repo).unwrap();
-    diff_w_commit(&repo, &commit)?;
-
-    Ok(())
+    diff_w_commit(&repo, &commit)
 }
 
-pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<(), git2::Error> {
-    // let commit = get_ancestor_with_main_branch(&repo).unwrap();
+pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<u64, git2::Error> {
     let mut opts = DiffOptions::new();
     opts.patience(true);
     let diffs = repo
         .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
         .unwrap();
     debug!("n deltas: {}", diffs.deltas().len());
-    // let mut lines: Vec<String> = vec![];
-    let mut lines = DiffWords::new();
+    let mut word_diff = DiffWords::new();
     diffs
         .print(DiffFormat::Patch, |d, h, l| {
-            capture_diff_line(d, h, l, &mut lines, true)
+            capture_diff_line(d, h, l, &mut word_diff, true)
         })
         .unwrap();
-    debug!("/difflines/ {:?}", lines);
-    lines.diff();
+    debug!("/difflines/ {:?}", word_diff);
+    Ok(word_diff.diff_words_added())
 
-    Ok(())
 }
+

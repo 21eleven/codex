@@ -9,8 +9,8 @@ use crate::tree::next_sibling_id;
 use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
-    capture_diff_line, commit_all, find_last_commit, get_last_commit_of_branch,
-    handle_git_branching, make_branch_and_checkout, repo, stage_all, get_ancestor_with_main_branch, diff_w_last_commit
+    commit_all, get_last_commit_of_branch,
+    handle_git_branching, repo, stage_all, diff_w_last_commit, diff_w_main
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -62,27 +62,12 @@ impl Handler for NeovimHandler {
                 on_start(neovim).await;
             }
             "diff" => {
-                let repo = self.repo.lock().unwrap();
-                // let commit = find_last_commit(&repo).unwrap();
-                let commit = get_ancestor_with_main_branch(&repo).unwrap();
-                let diffs = repo
-                    .diff_tree_to_workdir(Some(&commit.tree().unwrap()), None)
-                    // .diff_tree_to_workdir(None, None)
-                    .unwrap();
-                debug!("n deltas: {}", diffs.deltas().len());
-
-                // let mut lines: Vec<String> = vec![];
-                let mut lines = crate::git::DiffWords::new();
-                diffs
-                    .print(DiffFormat::Patch, |d, h, l| {
-                        capture_diff_line(d, h, l, &mut lines, false)
-                    })
-                    .unwrap();
-                debug!("/difflines/ {:?}", lines);
-                lines.diff();
+                let added = diff_w_main().unwrap();
+                debug!("words added (vs main): {}", added);
             }
             "diff_last" => {
-                diff_w_last_commit().unwrap();
+                let added = diff_w_last_commit().unwrap();
+                debug!("words added (vs prev commit): {}", added);
             }
             "stage" => {
                 stage_all().unwrap();
