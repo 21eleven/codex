@@ -2,7 +2,7 @@ use chrono::Local;
 use log::*;
 use std::str;
 use std::path::Path;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use git2::{Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, Oid, ObjectType, Repository};
 
@@ -303,3 +303,61 @@ pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<u64, git2::Er
 
 }
 
+struct DiffReport {
+    lines: BTreeMap<String, String>
+}
+
+impl DiffReport {
+    pub fn new() -> Self {
+        Self { lines: BTreeMap::new() }
+    }
+    pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
+        match line.origin() {
+            '+' => {
+                let content = String::from(str::from_utf8(line.content()).unwrap());
+                let key = String::from(delta.new_file()
+                                       .path().unwrap()
+                                       .to_str().unwrap());
+                self.lines.insert(key, content);
+            }
+            _ => {}
+        }
+    }
+    pub fn report(&self) -> String {
+        let mut output = vec![];
+        for (filepath, content) in self.lines.iter() {
+            output.push(filepath.clone());
+            output.push(content.clone());
+        }
+        output.join("\n")
+    }
+
+}
+
+pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::Error> {
+    let mut opts = DiffOptions::new();
+    opts.patience(true);
+    let diffs = repo
+        .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
+        .unwrap();
+    let mut report = DiffReport::new();
+    diffs
+        .print(DiffFormat::Patch, |d, _, l| {
+            report.insert(d, l);
+            true
+        })
+        .unwrap();
+    Ok(report.report())
+}
+
+pub fn diff_w_main_report() -> Result<String, git2::Error>{
+    let repo = repo()?;
+    let commit = get_ancestor_with_main_branch(&repo).unwrap();
+    diff_report(&repo, &commit)
+}
+
+pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
+    let repo = repo()?;
+    let commit = find_last_commit(&repo).unwrap();
+    diff_report(&repo, &commit)
+}
