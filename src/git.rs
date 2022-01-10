@@ -369,3 +369,18 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
     let commit = find_last_commit(&repo).unwrap();
     diff_report(&repo, &commit)
 }
+
+pub fn push_to_git_remote() -> Result<(), git2::Error> {
+    let repo = repo()?;
+    let current_branch = repo.head()?.name().unwrap_or("").to_string();
+    let mut remote = repo.find_remote("origin")?;
+    remote.connect(git2::Direction::Push)?;
+    remote.push(
+        &[
+            format!("{}:{}", current_branch, current_branch),
+            "refs/heads/main:refs/heads/main".to_owned(),
+        ],
+        None,
+    )?;
+    Ok(())
+}
