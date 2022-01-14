@@ -8,6 +8,8 @@ use git2::{
     Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Oid,
     Repository,
 };
+use git2::{Cred, RemoteCallbacks, PushOptions};
+use std::env;
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
 static GLOB_ALL: &str = "codex/*";
@@ -371,6 +373,18 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
 }
 
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
+    let mut callbacks = RemoteCallbacks::new();
+    callbacks.credentials(|_url, username_from_url, _allowed_types| {
+      debug!("{}", username_from_url.unwrap());
+      Cred::ssh_key(
+        username_from_url.unwrap(),
+        None,
+        std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
+        None,
+      )
+    });
+    let mut push_opts = PushOptions::new();
+    push_opts.remote_callbacks(callbacks);
     let repo = repo()?;
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
     let mut remote = repo.find_remote("origin")?;
@@ -380,7 +394,7 @@ pub fn push_to_git_remote() -> Result<(), git2::Error> {
             format!("{}:{}", current_branch, current_branch),
             "refs/heads/main:refs/heads/main".to_owned(),
         ],
-        None,
+        Some(&mut push_opts),
     )?;
     Ok(())
 }

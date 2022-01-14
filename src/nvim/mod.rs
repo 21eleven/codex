@@ -10,7 +10,7 @@ use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::{
     commit_all, diff_w_last_commit, diff_w_last_commit_report, diff_w_main, diff_w_main_report,
-    get_last_commit_of_branch, handle_git_branching, repo, stage_all,
+    get_last_commit_of_branch, handle_git_branching, push_to_git_remote, repo, stage_all,
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -89,6 +89,9 @@ impl Handler for NeovimHandler {
                 let branch_name = _args[0].as_str().unwrap();
                 let commit = get_last_commit_of_branch(&repo, branch_name);
                 debug!("{}: {:?}", branch_name, commit);
+            }
+            "push" => {
+                debug!("push status: {:?}", push_to_git_remote());
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
