@@ -373,22 +373,12 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
 }
 
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
-    let mut callbacks = RemoteCallbacks::new();
-    callbacks.credentials(|_url, username_from_url, _allowed_types| {
-      debug!("{}", username_from_url.unwrap());
-      Cred::ssh_key(
-        username_from_url.unwrap(),
-        None,
-        std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
-        None,
-      )
-    });
-    let mut push_opts = PushOptions::new();
-    push_opts.remote_callbacks(callbacks);
+    debug!("in push to git remote");
+    let mut push_opts = PushOptions::default();
+    push_opts.remote_callbacks(callback());
     let repo = repo()?;
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
     let mut remote = repo.find_remote("origin")?;
-    remote.connect(git2::Direction::Push)?;
     remote.push(
         &[
             format!("{}:{}", current_branch, current_branch),
@@ -397,4 +387,18 @@ pub fn push_to_git_remote() -> Result<(), git2::Error> {
         Some(&mut push_opts),
     )?;
     Ok(())
+}
+fn callback() -> RemoteCallbacks<'static> {
+    let mut cb = RemoteCallbacks::new();
+    cb.credentials(|_url, username, _allowed_types| {
+        debug!("CB\nurl: {:?}\nusername: {:?}\nallowed types: {:?}",_url, &username, &_allowed_types);
+        Cred::ssh_key(
+            username.unwrap(),
+            None,
+            std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
+            None,
+        )
+    });
+
+    cb
 }
