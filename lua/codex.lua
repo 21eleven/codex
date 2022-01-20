@@ -13,6 +13,7 @@ if vim.fn.executable(binary_path) == 0 then
     binary_path = plugin_dir .. "/target/release/codex"
 end
 
+local config = require "lua/config"
 local _t = {}
 
 function M.start()
@@ -21,7 +22,7 @@ function M.start()
     end
     -- :h jobstart has on_stdout option...
     _t.job_id = vim.fn.jobstart({ binary_path }, { cwd = codex_runtime_dir, rpc = true })
-    vim.rpcnotify(_t.job_id, "start")
+    vim.rpcnotify(_t.job_id, "start", config.git_remote)
 end
 
 function M.stop()
