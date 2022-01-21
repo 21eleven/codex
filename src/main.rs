@@ -32,14 +32,14 @@ async fn main() {
         return;
     }
     debug!("backend live within: {:?}", env::current_dir().unwrap());
-    let repo = Arc::new(Mutex::new(match Repository::open("./") {
+    match Repository::open("./") {
         Ok(repo) => repo,
         Err(_) => {
             // lay foundation needs to interact w
             // git add and commit the initial nodes
             init_codex_repo()
         }
-    }));
+    };
     let tree = Arc::new(Mutex::new(
         match tree::Tree::build("./codex/".to_string()) {
             Ok(tree) => {
@@ -52,7 +52,7 @@ async fn main() {
             }
         },
     ));
-    let handler = NeovimHandler { repo, tree };
+    let handler = NeovimHandler { tree };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
         Err(join_error) => {

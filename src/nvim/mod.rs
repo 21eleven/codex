@@ -22,7 +22,6 @@ use tokio::time;
 
 #[derive(Clone)]
 pub struct NeovimHandler {
-    pub repo: Arc<Mutex<Repository>>,
     pub tree: Arc<Mutex<tree::Tree>>,
 }
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
@@ -49,7 +48,6 @@ impl Handler for NeovimHandler {
             "start" => {
                 log::debug!("starting CODEX!");
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
-                log::debug!("{:?}", self.repo.lock().unwrap().state());
                 let today = self.tree.lock().unwrap().today_node();
                 handle_git_branching().unwrap();
 
