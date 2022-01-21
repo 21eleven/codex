@@ -33,11 +33,15 @@ async fn main() {
     }
     debug!("backend live within: {:?}", env::current_dir().unwrap());
     match Repository::open("./") {
-        Ok(repo) => repo,
+        Ok(_repo) => {
+            // pull latest from remote, merge any updates from remote to local
+        }
         Err(_) => {
-            // lay foundation needs to interact w
-            // git add and commit the initial nodes
-            init_codex_repo()
+            if let Ok(git_remote_url) = std::env::var("CODEX_GIT_REMOTE") {
+                // perform clone
+            } else {
+                init_codex_repo();
+            }
         }
     };
     let tree = Arc::new(Mutex::new(

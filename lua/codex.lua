@@ -15,6 +15,9 @@ end
 
 local config = require "lua/config"
 local _t = {}
+if config.git_remote ~= nil then
+    vim.fn.setenv("CODEX_GIT_REMOTE", config.git_remote)
+end
 
 function M.start()
     if _t.job_id ~= nil then
