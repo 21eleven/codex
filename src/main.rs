@@ -45,7 +45,7 @@ async fn main() {
         }
     };
     let tree = Arc::new(Mutex::new(
-        match tree::Tree::build("./codex/".to_string()) {
+        match tree::Tree::build("./".to_string()) {
             Ok(tree) => {
                 debug!("tree gud!");
                 tree

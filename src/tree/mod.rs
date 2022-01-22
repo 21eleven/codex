@@ -91,8 +91,8 @@ pub fn next_sibling_id(key: &String) -> u64 {
     let path = PathBuf::from(key);
     // could be next root dir id
     let search_dir = match path.parent() {
-        Some(parent) => PathBuf::from("./codex/").join(parent),
-        None => PathBuf::from("./codex/"),
+        Some(parent) => PathBuf::from("./").join(parent),
+        None => PathBuf::from("./"),
     };
     // TODO: check search_dir exists?
     let metas = WalkDir::new(search_dir)
@@ -111,7 +111,7 @@ pub fn next_child_id(path: &String) -> u64 {
     let path = PathBuf::from(path);
     // why not just look in child array of parent?
     // TODO: check search_dir exists?
-    let search_dir = PathBuf::from("./codex/").join(path);
+    let search_dir = PathBuf::from("./").join(path);
     let metas = WalkDir::new(search_dir)
         .sort_by_file_name()
         .contents_first(true)
@@ -310,8 +310,8 @@ impl Tree {
                                 // node_clone.mv(newid.clone());
                                 node_clone.id = newid.clone();
                                 debug!("renaming {:?} to {:?}", sibid, &newid);
-                                let old_path = PathBuf::from("./codex").join(&sibid);
-                                let new_path = PathBuf::from("./codex").join(&newid);
+                                let old_path = PathBuf::from(".").join(&sibid);
+                                let new_path = PathBuf::from(".").join(&newid);
                                 // move sib node on fs
                                 rename(old_path, new_path).unwrap();
                                 // link is another node
@@ -368,7 +368,7 @@ impl Tree {
                             }
                             commit_paths(
                                 &repo,
-                                vec![&Path::new("codex/*")],
+                                vec![&Path::new("./*")],
                                 &format!("node renames due to new power of ten node {}", child_id),
                             )
                             .unwrap();

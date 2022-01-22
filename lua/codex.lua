@@ -1,12 +1,8 @@
 local M = {}
 
+-- Would be installed where? .local/share/codex?
 local plugin_dir = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file("lua/codex.lua", false)[1], ":h:h")
 vim.fn.setenv("CODEX_HOME", plugin_dir)
--- set codex runtime dir here using some user config setting
--- local codex_runtime_dir = vim.loop.os_homedir() .. ".local/share/codex"
-local codex_runtime_dir = vim.loop.os_homedir() .. "/gits/codex/data"
--- local codex_runtime_dir = vim.loop.os_homedir() .. "/tmp"
-vim.fn.setenv("CODEX_RUNTIME_DIR", codex_runtime_dir)
 
 local binary_path = plugin_dir .. "/target/debug/codex"
 if vim.fn.executable(binary_path) == 0 then
@@ -20,6 +16,11 @@ else
 end
 
 local config = M.config
+-- make codex directory if needed
+if vim.fn.isdirectory(config.codex_directory) == 0 then
+  vim.fn.mkdir(config.codex_directory, 'p')
+end
+vim.fn.setenv("CODEX_RUNTIME_DIR", config.codex_directory)
 
 local _t = {}
 if config.git_remote ~= nil then
@@ -31,7 +32,7 @@ function M.start()
         return
     end
     -- :h jobstart has on_stdout option...
-    _t.job_id = vim.fn.jobstart({ binary_path }, { cwd = codex_runtime_dir, rpc = true })
+    _t.job_id = vim.fn.jobstart({ binary_path }, { cwd = config.codex_directory, rpc = true })
     vim.rpcnotify(_t.job_id, "start", config.git_remote)
 end
 

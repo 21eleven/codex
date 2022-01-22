@@ -18,7 +18,6 @@ use std::fmt;
 // struct HierarchicalIdentifier {
 //     codex_path: String
 // }
-const CODEX_ROOT: &str = "./codex/";
 pub enum Entry {
     Page,
     Todo,
@@ -121,7 +120,7 @@ impl Node {
     pub fn create(name: String, parent: Option<&Node>) -> Node {
         // what if directory already exists?
         let node = Node::new(name, parent);
-        let directory = Path::new("codex").join(&node.id);
+        let directory = Path::new("./").join(&node.id);
         let meta_toml = NodeMeta::from(&node).to_toml();
         create_dir(&directory).unwrap();
         let data = directory.join("_.md");
@@ -206,7 +205,7 @@ impl Node {
         todo!();
     }
     pub fn write_meta(&self) {
-        let metadata = Path::new("codex").join(&self.id).join("meta.toml");
+        let metadata = Path::new("./").join(&self.id).join("meta.toml");
         let meta_toml = NodeMeta::from(&self).to_toml();
         let display = metadata.display();
         let mut file = OpenOptions::new()
@@ -311,7 +310,6 @@ impl NodeMeta {
 }
 
 pub fn init_codex_repo() -> Repository {
-    fs::create_dir(CODEX_ROOT).unwrap();
     let repo = Repository::init("./").unwrap();
     let mut journal = Node::create("journal".to_string(), None);
     journal.tag(String::from("journal"));
@@ -321,7 +319,7 @@ pub fn init_codex_repo() -> Repository {
     desk.tag(String::from("desk"));
     desk.write_meta();
     debug!("created desk: {}", desk);
-    commit_paths(&repo, vec![&Path::new("codex/*")], "codex init").unwrap();
+    commit_paths(&repo, vec![&Path::new("./*")], "codex init").unwrap();
     debug!("codex git repo initialized");
     repo
 }

@@ -52,7 +52,7 @@ impl Handler for NeovimHandler {
                 handle_git_branching().unwrap();
 
                 match env::current_dir().unwrap().to_str() {
-                    Some(dir) => neovim.command(&format!("cd {}/codex", dir)).await.unwrap(),
+                    Some(dir) => neovim.command(&format!("cd {}", dir)).await.unwrap(),
                     None => {}
                 }
                 // let today = tree.today_node();
