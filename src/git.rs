@@ -5,17 +5,16 @@ use std::path::Path;
 use std::str;
 
 use git2::{
-    Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Oid,
-    Repository,
+    Commit, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Oid, Repository,
 };
-use git2::{Cred, RemoteCallbacks, PushOptions};
+use git2::{Cred, PushOptions, RemoteCallbacks};
 use std::env;
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
-static GLOB_ALL: &str = "codex/*";
+static GLOB_ALL: &str = "./*";
 
 pub fn repo() -> Result<Repository, git2::Error> {
-    Ok(Repository::open("./")?)
+    Repository::open("./")
 }
 
 pub fn stage_paths(paths: Vec<&Path>) -> Result<(), git2::Error> {
@@ -83,7 +82,7 @@ pub fn commit_paths(
     index.write()?;
     let oid = index.write_tree()?;
     let tree = repo.find_tree(oid)?;
-    let parents = match find_last_commit(&repo) {
+    let parents = match find_last_commit(repo) {
         Ok(commit) => vec![commit],
         Err(_) => vec![],
     };
@@ -133,7 +132,7 @@ pub fn commit_staged(message: Option<&str>) -> Result<(), git2::Error> {
     Ok(())
 }
 fn repo_has_uncommitted_changes(repo: &Repository) -> Result<bool, git2::Error> {
-    let last_commit = find_last_commit(&repo).unwrap();
+    let last_commit = find_last_commit(repo).unwrap();
     Ok(repo
         .diff_tree_to_workdir(Some(&last_commit.tree()?), None)?
         .deltas()
@@ -146,7 +145,7 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
     let today_branch_name = Local::now().format("%Y%m%d").to_string();
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
 
-    if &current_branch != &format!("refs/heads/{}", today_branch_name) {
+    if current_branch != format!("refs/heads/{}", today_branch_name) {
         if repo_has_uncommitted_changes(&repo)? {
             commit_all(None)?;
         }
@@ -185,16 +184,14 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
     Ok(())
 }
 
-pub fn get_ancestor_with_main_branch<'repo>(
-    repo: &'repo Repository,
-) -> Result<Commit<'repo>, git2::Error> {
+pub fn get_ancestor_with_main_branch(repo: &Repository) -> Result<Commit, git2::Error> {
     // Ok i should make this module have a
     // Repo struct and some helper functions
     // any func that takes repo should go on
     // the Repo struct which will wrap
     // git2::Repository
-    let last_commit = find_last_commit(&repo)?;
-    let main_commit = get_last_commit_of_branch(&repo, "main")?;
+    let last_commit = find_last_commit(repo)?;
+    let main_commit = get_last_commit_of_branch(repo, "main")?;
     // do i need to find annotated commits?
     let main = repo.find_annotated_commit(main_commit.id())?;
     let other = repo.find_annotated_commit(last_commit.id())?;
@@ -240,12 +237,9 @@ impl DiffWords {
         let mut added = 0;
         for (left, right) in self.words.values() {
             for result in lcs_diff::diff(left, right) {
-                match result {
-                    lcs_diff::DiffResult::Added(w) => {
-                        debug!("[+] {:?}", w.data);
-                        added += 1;
-                    }
-                    _ => {}
+                if let lcs_diff::DiffResult::Added(w) = result {
+                    debug!("[+] {:?}", w.data);
+                    added += 1;
                 }
             }
         }
@@ -255,22 +249,13 @@ impl DiffWords {
 
 pub fn capture_diff_line(
     delta: DiffDelta,
-    hunk: Option<DiffHunk>,
+    _hunk: Option<DiffHunk>,
     line: DiffLine,
-    // lines: &mut Vec<String>,
     diff: &mut DiffWords,
     print: bool,
 ) -> bool {
     let content = String::from(str::from_utf8(line.content()).unwrap());
     if print {
-        // debug!("delta: {:?}", delta);
-        // debug!("hunk: {:?}", hunk);
-        // match hunk {
-        //     Some(h) => {
-        //         debug!("Hunk:\n{:?}",String::from(std::str::from_utf8(h.header()).unwrap()) );
-        //     }
-        //     None => {}
-        // }
         match line.origin() {
             '+' | '-' => {
                 debug!("line: [{}] {:?}", line.origin(), content);
@@ -324,14 +309,11 @@ impl DiffReport {
         }
     }
     pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
-        match line.origin() {
-            '+' => {
-                let content = String::from(str::from_utf8(line.content()).unwrap());
-                debug!("content line: {:?}", content);
-                let key = String::from(delta.new_file().path().unwrap().to_str().unwrap());
-                self.lines.entry(key).or_insert(vec![]).push(content);
-            }
-            _ => {}
+        if let '+' = line.origin() {
+            let content = String::from(str::from_utf8(line.content()).unwrap());
+            debug!("content line: {:?}", content);
+            let key = String::from(delta.new_file().path().unwrap().to_str().unwrap());
+            self.lines.entry(key).or_insert_with(Vec::new).push(content);
         }
     }
     pub fn report(&self) -> String {
@@ -391,7 +373,10 @@ pub fn push_to_git_remote() -> Result<(), git2::Error> {
 fn callback() -> RemoteCallbacks<'static> {
     let mut cb = RemoteCallbacks::new();
     cb.credentials(|_url, username, _allowed_types| {
-        debug!("CB\nurl: {:?}\nusername: {:?}\nallowed types: {:?}",_url, &username, &_allowed_types);
+        debug!(
+            "CB\nurl: {:?}\nusername: {:?}\nallowed types: {:?}",
+            _url, &username, &_allowed_types
+        );
         Cred::ssh_key(
             username.unwrap(),
             None,
