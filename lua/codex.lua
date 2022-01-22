@@ -13,7 +13,14 @@ if vim.fn.executable(binary_path) == 0 then
     binary_path = plugin_dir .. "/target/release/codex"
 end
 
-local config = require "lua/config"
+if vim.fn.getenv("CODEX_DEV") == "true" then
+  M.config = require "dev_config"
+else
+  M.config = require "config"
+end
+
+local config = M.config
+
 local _t = {}
 if config.git_remote ~= nil then
     vim.fn.setenv("CODEX_GIT_REMOTE", config.git_remote)

@@ -1,9 +1,4 @@
-vim.opt.runtimepath= "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after,~/gits/codex"
-
-example_func = function(a, b)
-	print("A is: ", a)
-	print("B is: ", b)
-end
+vim.opt.runtimepath= "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after,~/gits/codex,~/.config/codex"
 
 local execute = vim.api.nvim_command
 local fn = vim.fn
@@ -21,48 +16,25 @@ end
 
 vim.cmd [[packadd packer.nvim]]
 
-require('packer').startup(function()
-  use 'wbthomason/packer.nvim'
-  use {'dracula/vim', as = 'dracula'}
-  use { 'ms-jpq/chadtree', run = 'python -m chadtree deps'}
-  use {
-    'nvim-telescope/telescope.nvim',
-    requires = { {'nvim-lua/plenary.nvim'} }
-  }
-end)
+opt = vim.opt
+g = vim.g
 
-vim.cmd [[colorscheme dracula]]
-
-Codex = require("lua/codex")
-
-local opt = vim.opt
-local g = vim.g
-
-local function map(mode, lhs, rhs, opts)
+function map(mode, lhs, rhs, opts)
   local options = {noremap = true}
   if opts then options = vim.tbl_extend('force', options, opts) end
   vim.api.nvim_set_keymap(mode, lhs, rhs, options)
 end
 
-g.mapleader = ' '
-map('i', 'jk', '<esc>', opt)
-map('n', '<leader>e', ":bdelete!", opt)
-map('n', '<left>', '0', opt)
-map('n', '<right>', '$', opt)
-map('n', '<up>', 'kkkkkkk', opt)
-map('n', '<down>', 'jjjjjjj', opt)
-map('n', '<leader>nh', '<esc>:', opt)
-map('n', '<leader>nn', '<esc>/', opt)
-map('n', '<leader>w', ':w!<cr>', opt)
-map('n', '<leader><leader>w', ':wq!<cr>', opt)
-map('n', '<leader>q', ':qa!<cr>', opt)
--- map('n', '<leader><leader>e', ':q!<cr>', opt)
+Codex = require("lua/codex")
 
-map('n', '<leader>j', ':BufferLineCyclePrev<CR>', opt)
-map('n', '<leader>k', ':BufferLineCycleNext<CR>', opt)
-map('n', '<leader>h', '<C-w>h<CR>0', opt)
--- map('n', '<leader>hh', '<C-w>h<CR>0', opt)
-map('n', '<leader>l', '<C-w>l<CR>0', opt)
+require('packer').startup(function()
+  use 'wbthomason/packer.nvim'
+  use {
+    'nvim-telescope/telescope.nvim',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
+  Codex.config.packages(use)
+end)
 
 vim.cmd [[autocmd VimEnter * lua Codex.start()]]
 vim.cmd [[autocmd VimLeave * lua Codex.stop()]]

@@ -1,7 +1,6 @@
 __pycache__/
 *.log
 data/
-lua/config.lua
 
 # Added by cargo
 

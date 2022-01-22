@@ -1,3 +1,4 @@
 #!/bin/sh
 
-XDG_DATA_HOME="$HOME/.local/share/codex" nvim -u "$HOME"/gits/codex/init.lua "$@"
+XDG_DATA_HOME="$HOME/.local/share/codex" CODEX_DEV="true" nvim -u "$HOME"/gits/codex/init.lua "$@"
+# XDG_DATA_HOME="$HOME/.local/share/codex" nvim -u "$HOME"/gits/codex/init.lua "$@"
