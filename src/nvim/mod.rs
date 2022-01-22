@@ -59,7 +59,6 @@ impl Handler for NeovimHandler {
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 debug!("git remote url {:?}", std::env::var("CODEX_GIT_REMOTE"));
                 on_start(neovim).await;
-
             }
             "diff" => {
                 let added = diff_w_main().unwrap();

@@ -44,18 +44,16 @@ async fn main() {
             }
         }
     };
-    let tree = Arc::new(Mutex::new(
-        match tree::Tree::build("./".to_string()) {
-            Ok(tree) => {
-                debug!("tree gud!");
-                tree
-            }
-            Err(e) => {
-                error!("tree ERROR! {:?}", e);
-                panic!("tree Error - PANIC {:?}", e);
-            }
-        },
-    ));
+    let tree = Arc::new(Mutex::new(match tree::Tree::build("./".to_string()) {
+        Ok(tree) => {
+            debug!("tree gud!");
+            tree
+        }
+        Err(e) => {
+            error!("tree ERROR! {:?}", e);
+            panic!("tree Error - PANIC {:?}", e);
+        }
+    }));
     let handler = NeovimHandler { tree };
     let (nvim, io_handler) = create::new_parent(handler).await;
     match io_handler.await {
