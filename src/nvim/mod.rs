@@ -70,11 +70,11 @@ impl Handler for NeovimHandler {
             }
             "diff_report" => {
                 let report = diff_w_main_report().unwrap();
-                debug!("Diff Report (vs main): \n{}", report);
+                debug!("Diff Report (vs main): {:?}", report);
             }
             "diff_last_report" => {
                 let report = diff_w_last_commit_report().unwrap();
-                debug!("Diff Report (vs last commit): \n{}", report);
+                debug!("Diff Report (vs last commit): {:?}", report);
             }
             "stage" => {
                 stage_all().unwrap();

@@ -22,6 +22,12 @@ pub struct Tree {
     pub desk: NodeKey,
 }
 
+impl Drop for Tree {
+    fn drop(&mut self) {
+        debug!("dropping codex node tree");
+    }
+}
+
 impl fmt::Display for Tree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Tree(\n")?;

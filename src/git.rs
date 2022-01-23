@@ -1,17 +1,19 @@
 use chrono::Local;
+use git2::build::RepoBuilder;
 use log::*;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::str;
 
 use git2::{
-    Commit, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, ObjectType, Oid, Repository,
+    Commit, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions, FetchOptions, ObjectType,
+    Oid, Repository,
 };
 use git2::{Cred, PushOptions, RemoteCallbacks};
 use std::env;
 
 static DEFAULT_COMMIT_MSG: &str = "."; // what should be the default message???
-static GLOB_ALL: &str = "./*";
+static GLOB_ALL: &str = "*";
 
 pub fn repo() -> Result<Repository, git2::Error> {
     Repository::open("./")
@@ -26,7 +28,7 @@ pub fn stage_paths(paths: Vec<&Path>) -> Result<(), git2::Error> {
 }
 
 pub fn stage_all() -> Result<(), git2::Error> {
-    stage_paths(vec![Path::new("codex/*")])?;
+    stage_paths(vec![Path::new("*")])?;
     Ok(())
 }
 
@@ -210,27 +212,36 @@ impl DiffWords {
         }
     }
     pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
-        let key = (delta.old_file().id(), delta.new_file().id());
-        match line.origin() {
-            '+' => {
-                for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
-                    self.words
-                        .entry(key)
-                        .or_insert((vec![], vec![]))
-                        .1
-                        .push(String::from(word));
+        if delta
+            .new_file()
+            .path()
+            .unwrap_or_else(|| Path::new(""))
+            .file_name()
+            .unwrap_or_default()
+            != "meta.toml"
+        {
+            let key = (delta.old_file().id(), delta.new_file().id());
+            match line.origin() {
+                '+' => {
+                    for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
+                        self.words
+                            .entry(key)
+                            .or_insert((vec![], vec![]))
+                            .1
+                            .push(String::from(word));
+                    }
                 }
-            }
-            '-' => {
-                for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
-                    self.words
-                        .entry(key)
-                        .or_insert((vec![], vec![]))
-                        .0
-                        .push(String::from(word));
+                '-' => {
+                    for word in str::from_utf8(line.content()).unwrap().split_whitespace() {
+                        self.words
+                            .entry(key)
+                            .or_insert((vec![], vec![]))
+                            .0
+                            .push(String::from(word));
+                    }
                 }
+                _ => {}
             }
-            _ => {}
         }
     }
     pub fn diff_words_added(&mut self) -> u64 {
@@ -238,7 +249,6 @@ impl DiffWords {
         for (left, right) in self.words.values() {
             for result in lcs_diff::diff(left, right) {
                 if let lcs_diff::DiffResult::Added(w) = result {
-                    debug!("[+] {:?}", w.data);
                     added += 1;
                 }
             }
@@ -268,10 +278,16 @@ pub fn capture_diff_line(
 
     true
 }
+fn diff<'a>(repo: &'a Repository, commit: &'a Commit) -> Result<Diff<'a>, git2::Error> {
+    let mut opts = DiffOptions::new();
+    opts.patience(true);
+    repo.diff_tree_to_workdir_with_index(Some(&commit.tree().unwrap()), Some(&mut opts))
+}
 
 pub fn diff_w_main() -> Result<u64, git2::Error> {
     let repo = repo()?;
     let commit = get_ancestor_with_main_branch(&repo).unwrap();
+    debug!("ancestor w main sha1 {:?}", &commit);
     diff_w_commit(&repo, &commit)
 }
 
@@ -282,16 +298,11 @@ pub fn diff_w_last_commit() -> Result<u64, git2::Error> {
 }
 
 pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<u64, git2::Error> {
-    let mut opts = DiffOptions::new();
-    opts.patience(true);
-    let diffs = repo
-        .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
-        .unwrap();
-    debug!("n deltas: {}", diffs.deltas().len());
+    let diffs = diff(repo, commit)?;
     let mut word_diff = DiffWords::new();
     diffs
         .print(DiffFormat::Patch, |d, h, l| {
-            capture_diff_line(d, h, l, &mut word_diff, true)
+            capture_diff_line(d, h, l, &mut word_diff, false)
         })
         .unwrap();
     debug!("/difflines/ {:?}", word_diff);
@@ -309,11 +320,19 @@ impl DiffReport {
         }
     }
     pub fn insert(&mut self, delta: DiffDelta, line: DiffLine) {
-        if let '+' = line.origin() {
-            let content = String::from(str::from_utf8(line.content()).unwrap());
-            debug!("content line: {:?}", content);
-            let key = String::from(delta.new_file().path().unwrap().to_str().unwrap());
-            self.lines.entry(key).or_insert_with(Vec::new).push(content);
+        if delta
+            .new_file()
+            .path()
+            .unwrap_or_else(|| Path::new(""))
+            .file_name()
+            .unwrap_or_default()
+            != "meta.toml"
+        {
+            if let '+' = line.origin() {
+                let content = String::from(str::from_utf8(line.content()).unwrap());
+                let key = String::from(delta.new_file().path().unwrap().to_str().unwrap());
+                self.lines.entry(key).or_insert_with(Vec::new).push(content);
+            }
         }
     }
     pub fn report(&self) -> String {
@@ -327,11 +346,7 @@ impl DiffReport {
 }
 
 pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::Error> {
-    let mut opts = DiffOptions::new();
-    opts.patience(true);
-    let diffs = repo
-        .diff_tree_to_workdir(Some(&commit.tree().unwrap()), Some(&mut opts))
-        .unwrap();
+    let diffs = diff(repo, commit)?;
     let mut report = DiffReport::new();
     diffs
         .print(DiffFormat::Patch, |d, _, l| {
@@ -339,7 +354,10 @@ pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::E
             true
         })
         .unwrap();
-    Ok(report.report())
+    let output = report.report();
+    debug!("diff report output String: {:?}", &output);
+
+    Ok(output)
 }
 
 pub fn diff_w_main_report() -> Result<String, git2::Error> {
@@ -386,4 +404,12 @@ fn callback() -> RemoteCallbacks<'static> {
     });
 
     cb
+}
+
+pub fn git_clone(url: &str) -> Result<Repository, git2::Error> {
+    let mut opts = FetchOptions::new();
+    opts.remote_callbacks(callback());
+    let mut builder = RepoBuilder::new();
+    builder.fetch_options(opts);
+    builder.clone(url, Path::new("./"))
 }

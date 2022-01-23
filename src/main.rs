@@ -12,6 +12,7 @@ mod node;
 mod nvim;
 mod tree;
 
+use git::git_clone;
 use node::init_codex_repo;
 use nvim::NeovimHandler;
 
@@ -38,7 +39,9 @@ async fn main() {
         }
         Err(_) => {
             if let Ok(git_remote_url) = std::env::var("CODEX_GIT_REMOTE") {
-                // perform clone
+                debug!("cloning {}", &git_remote_url);
+                git_clone(&git_remote_url).unwrap();
+                debug!("{} successfully cloned!", &git_remote_url);
             } else {
                 init_codex_repo();
             }
