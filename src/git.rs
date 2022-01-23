@@ -373,17 +373,38 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
 }
 
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
+    commit_all(None)?;
     debug!("in push to git remote");
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
+    debug!("{:?}", current_branch);
+    let latest_commit = repo
+        .revparse_single(&current_branch)
+        .unwrap()
+        .peel_to_commit()
+        .unwrap();
+    debug!("{:?}", latest_commit);
+    repo.tag(
+        "latest",
+        latest_commit.as_object(),
+        &repo.signature()?,
+        &current_branch,
+        true,
+    )?;
     let mut remote = repo.find_remote("origin")?;
     remote.push(
         &[
             format!("{}:{}", current_branch, current_branch),
             "refs/heads/main:refs/heads/main".to_owned(),
         ],
+        Some(&mut push_opts),
+    )?;
+    debug!("branch pushed");
+    let mut remote = repo.find_remote("origin")?;
+    remote.push(
+        &["refs/tags/latest:refs/tags/latest".to_owned()],
         Some(&mut push_opts),
     )?;
     Ok(())
@@ -406,12 +427,19 @@ fn callback() -> RemoteCallbacks<'static> {
     cb
 }
 
-pub fn git_clone(url: &str) -> Result<Repository, git2::Error> {
+pub fn git_clone(url: &str) -> Result<(), git2::Error> {
     let mut opts = FetchOptions::new();
     opts.remote_callbacks(callback());
+    opts.download_tags(git2::AutotagOption::All);
     let mut builder = RepoBuilder::new();
     builder.fetch_options(opts);
-    builder.clone(url, Path::new("./"))
+    let repo = builder.clone(url, Path::new("./"))?;
+    let latest_oid = repo.refname_to_id("refs/tags/latest")?;
+    let latest = &repo.find_tag(latest_oid)?;
+    let most_recent_active_branch = latest.message().unwrap().trim();
+    let mut remote = repo.find_remote("origin")?;
+    do_fetch(&repo, &[most_recent_active_branch], &mut remote)?;
+    Ok(())
 }
 
 pub fn fetch_and_pull() -> Result<(), git2::Error> {
@@ -420,9 +448,17 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     let today_branch_name = Local::now().format("%Y%m%d").to_string();
     let main_commit = do_fetch(&repo, &["main"], &mut remote)?;
     let mut remote = repo.find_remote("origin")?;
-    let today_branch_commit = do_fetch(&repo, &[&today_branch_name], &mut remote)?;
+    // let mut opts = git2::FetchOptions::new();
+    // opts.remote_callbacks(callback());
+    // opts.download_tags(git2::AutotagOption::All);
+    // remote.download(&["latest"], Some(&mut opts))?;
+    let latest_oid = repo.refname_to_id("refs/tags/latest")?;
+    let latest = repo.find_tag(latest_oid)?;
+    let most_recent_active_branch = latest.message().unwrap();
+    let today_branch_commit = do_fetch(&repo, &[most_recent_active_branch], &mut remote)?;
     do_merge(&repo, "main", main_commit)?;
-    do_merge(&repo, &today_branch_name, today_branch_commit)?;
+    do_merge(&repo, most_recent_active_branch, today_branch_commit)?;
+    checkout_branch(&repo, most_recent_active_branch)?;
     Ok(())
 }
 
