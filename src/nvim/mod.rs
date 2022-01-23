@@ -156,13 +156,16 @@ impl Handler for NeovimHandler {
                     _ => {}
                 }
             }
-            "stop" => {
-                tokio::spawn(async move {
-                    let mut interval = time::interval(time::Duration::from_secs(3));
-                    interval.tick().await;
-                    debug!("woke up, closing");
-                });
-            }
+            // "stop" => {
+            //     push_to_git_remote().unwrap();
+            //     info!("local pushed to remote");
+            //
+            //     tokio::spawn(async move {
+            //         let mut interval = time::interval(time::Duration::from_secs(3));
+            //         interval.tick().await;
+            //         debug!("woke up, closing");
+            //     });
+            // }
             _ => {}
         }
     }
@@ -174,12 +177,14 @@ impl Handler for NeovimHandler {
     ) -> Result<Value, Value> {
         debug!("in request handler");
         match name.as_str() {
-            // "stop" => {
-            //     let mut interval = time::interval(time::Duration::from_secs(3));
-            //     interval.tick().await;
-            //     debug!("woke up, closing");
-            //     Ok(Value::Nil)
-            // }
+            "stop" => {
+                push_to_git_remote().unwrap();
+                info!("local pushed to remote");
+                let mut interval = time::interval(time::Duration::from_secs(3));
+                interval.tick().await;
+                debug!("woke up, closing");
+                Ok(Value::Nil)
+            }
             "nodes" => {
                 let tree = &*self.tree.lock().unwrap();
                 // let mut nodes: Vec<&str> = tree
