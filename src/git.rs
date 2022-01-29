@@ -374,18 +374,15 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
 
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
     commit_all(None)?;
-    debug!("in push to git remote");
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
-    debug!("{:?}", current_branch);
     let latest_commit = repo
         .revparse_single(&current_branch)
         .unwrap()
         .peel_to_commit()
         .unwrap();
-    debug!("{:?}", latest_commit);
     repo.tag(
         "latest",
         latest_commit.as_object(),
@@ -398,15 +395,11 @@ pub fn push_to_git_remote() -> Result<(), git2::Error> {
         &[
             format!("{}:{}", current_branch, current_branch),
             "refs/heads/main:refs/heads/main".to_owned(),
+            "+refs/tags/latest:refs/tags/latest".to_owned(),
         ],
         Some(&mut push_opts),
     )?;
     debug!("branch pushed");
-    let mut remote = repo.find_remote("origin")?;
-    remote.push(
-        &["refs/tags/latest:refs/tags/latest".to_owned()],
-        Some(&mut push_opts),
-    )?;
     Ok(())
 }
 fn callback() -> RemoteCallbacks<'static> {
