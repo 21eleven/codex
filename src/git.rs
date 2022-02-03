@@ -457,19 +457,20 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     let repo = repo()?;
     let mut remote = repo.find_remote("origin")?;
     let today_branch_name = Local::now().format("%Y%m%d").to_string();
-    let main_commit = do_fetch(&repo, &["main"], &mut remote)?;
+    let main_commit = do_fetch(&repo, &["+refs/heads/main:refs/heads/main", "+refs/tags/latest:refs/tags/latest"], &mut remote)?;
     let mut remote = repo.find_remote("origin")?;
     // let mut opts = git2::FetchOptions::new();
     // opts.remote_callbacks(callback());
     // opts.download_tags(git2::AutotagOption::All);
     // remote.download(&["latest"], Some(&mut opts))?;
-    // let latest_oid = repo.refname_to_id("refs/tags/latest")?;
-    // let latest = repo.find_tag(latest_oid)?;
-    // let most_recent_active_branch = latest.message().unwrap();
+    let latest_oid = repo.refname_to_id("refs/tags/latest")?;
+    let latest = repo.find_tag(latest_oid)?;
+    let most_recent_active_branch = latest.message().unwrap();
     // let today_branch_commit = do_fetch(&repo, &[most_recent_active_branch], &mut remote)?;
+    let today_branch_commit = do_fetch(&repo, &[&format!("+refs/heads/{}:refs/heads/{}", &most_recent_active_branch, &most_recent_active_branch)], &mut remote)?;
     do_merge(&repo, "main", main_commit)?;
-    // do_merge(&repo, most_recent_active_branch, today_branch_commit)?;
-    // checkout_branch(&repo, most_recent_active_branch)?;
+    do_merge(&repo, most_recent_active_branch, today_branch_commit)?;
+    checkout_branch(&repo, most_recent_active_branch)?;
     Ok(())
 }
 

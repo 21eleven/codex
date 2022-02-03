@@ -12,7 +12,7 @@ mod node;
 mod nvim;
 mod tree;
 
-use git::git_clone;
+use git::{git_clone, fetch_and_pull};
 use node::init_codex_repo;
 use nvim::NeovimHandler;
 
@@ -36,6 +36,7 @@ async fn main() {
     match Repository::open("./") {
         Ok(_repo) => {
             // pull latest from remote, merge any updates from remote to local
+            fetch_and_pull();
         }
         Err(_) => {
             if let Ok(git_remote_url) = std::env::var("CODEX_GIT_REMOTE") {
