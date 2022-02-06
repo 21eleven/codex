@@ -191,7 +191,7 @@ impl Tree {
             }
             match name {
                 Some(namepath) => {
-                    debug!("{:?}", &namepath);
+                    // debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
                     let node = Node::from_tree(namepath, &meta_path, parent, children);
                     if journal.is_none() && node.tags.contains("journal") {
@@ -200,7 +200,7 @@ impl Tree {
                     if desk.is_none() && node.tags.contains("desk") {
                         *desk = Some(node.id.clone());
                     }
-                    debug!("{}", &node);
+                    // debug!("{}", &node);
                     node_map.insert(node.id.clone(), node);
                 }
                 None => {}
