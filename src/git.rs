@@ -468,9 +468,18 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     let most_recent_active_branch = latest.message().unwrap();
     // let today_branch_commit = do_fetch(&repo, &[most_recent_active_branch], &mut remote)?;
     let today_branch_commit = do_fetch(&repo, &[&format!("+refs/heads/{}:refs/heads/{}", &most_recent_active_branch, &most_recent_active_branch)], &mut remote)?;
+    // probably need to wrtie the tree o ftshi commit to the repo
+    // let commit_id = &today_branch_commit.id();
+
     do_merge(&repo, "main", main_commit)?;
     do_merge(&repo, most_recent_active_branch, today_branch_commit)?;
-    checkout_branch(&repo, most_recent_active_branch)?;
+    // checkout_branch(&repo, most_recent_active_branch)?;
+    // let tree = repo.head()?.peel_to_tree()?;
+    let c = &repo.head()?.peel(git2::ObjectType::Commit)?;
+
+    debug!("APPLYING {}", c.id());
+    // repo.checkout_tree(&tree, None)?;
+    repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
     Ok(())
 }
 
@@ -524,11 +533,11 @@ fn fast_forward(
     lb.set_target(rc.id(), &msg)?;
     repo.set_head(&name)?;
     repo.checkout_head(Some(
-        git2::build::CheckoutBuilder::default()
+        &mut git2::build::CheckoutBuilder::default()
             // For some reason the force is required to make the working directory actually get updated
             // I suspect we should be adding some logic to handle dirty working directory states
             // but this is just an example so maybe not.
-            .force(),
+            // .force(),
     ))?;
     Ok(())
 }
@@ -580,7 +589,7 @@ fn do_merge<'a>(
 
     // 2. Do the appopriate merge
     if analysis.0.is_fast_forward() {
-        println!("Doing a fast forward");
+        debug!("Doing a fast forward");
         // do a fast forward
         let refname = format!("refs/heads/{}", remote_branch);
         match repo.find_reference(&refname) {
@@ -602,7 +611,7 @@ fn do_merge<'a>(
                     git2::build::CheckoutBuilder::default()
                         .allow_conflicts(true)
                         .conflict_style_merge(true)
-                        .force(),
+                        // .force(),
                 ))?;
             }
         };
