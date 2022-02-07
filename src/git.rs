@@ -108,6 +108,16 @@ pub fn commit_all(message: Option<&str>) -> Result<(), git2::Error> {
     commit_paths(&repo()?, vec![Path::new(GLOB_ALL)], message)?;
     Ok(())
 }
+pub fn commit_any(message: Option<&str>) -> Result<(), git2::Error> {
+    let message = match message {
+        Some(msg) => msg,
+        None => DEFAULT_COMMIT_MSG,
+    };
+    let repo = repo()?;
+    if repo_has_uncommitted_changes(&repo)? {
+        commit_all(Some(message))
+    } else { Ok(())}
+}
 
 pub fn commit_staged(message: Option<&str>) -> Result<(), git2::Error> {
     let message = match message {
@@ -148,9 +158,7 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
     let current_branch = repo.head()?.name().unwrap_or("").to_string();
 
     if current_branch != format!("refs/heads/{}", today_branch_name) {
-        if repo_has_uncommitted_changes(&repo)? {
-            commit_all(None)?;
-        }
+        commit_any(None)?;
         // what if current branch is main? shouldn't be ever yea?
         // TODO need to get default branch from git2::Config::open_global()
         let last_commit = find_last_commit(&repo)?;
@@ -375,7 +383,7 @@ pub fn diff_w_last_commit_report() -> Result<String, git2::Error> {
 }
 
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
-    commit_all(None)?;
+    commit_any(None)?;
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
