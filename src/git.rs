@@ -152,6 +152,7 @@ pub fn handle_git_branching() -> Result<(), git2::Error> {
             commit_all(None)?;
         }
         // what if current branch is main? shouldn't be ever yea?
+        // TODO need to get default branch from git2::Config::open_global()
         let last_commit = find_last_commit(&repo)?;
         let main_commit = get_last_commit_of_branch(&repo, "main")?;
 
@@ -193,6 +194,7 @@ pub fn get_ancestor_with_main_branch(repo: &Repository) -> Result<Commit, git2::
     // the Repo struct which will wrap
     // git2::Repository
     let last_commit = find_last_commit(repo)?;
+    // TODO need to get default branch from git2::Config::open_global()
     let main_commit = get_last_commit_of_branch(repo, "main")?;
     // do i need to find annotated commits?
     let main = repo.find_annotated_commit(main_commit.id())?;
@@ -398,6 +400,7 @@ pub fn push_to_git_remote() -> Result<(), git2::Error> {
         true,
     )?;
     let mut remote = repo.find_remote("origin")?;
+    // TODO need to get default branch from git2::Config::open_global()
     remote.push(
         &[
             format!(
@@ -457,6 +460,7 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     let repo = repo()?;
     let mut remote = repo.find_remote("origin")?;
     let today_branch_name = Local::now().format("%Y%m%d").to_string();
+    // TODO need to get default branch from git2::Config::open_global()
     let main_commit = do_fetch(&repo, &["+refs/heads/main:refs/heads/main", "+refs/tags/latest:refs/tags/latest"], &mut remote)?;
     let mut remote = repo.find_remote("origin")?;
     // let mut opts = git2::FetchOptions::new();
