@@ -50,6 +50,7 @@ impl Handler for NeovimHandler {
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
                 let today = self.tree.lock().unwrap().today_node();
                 handle_git_branching().unwrap();
+                commit_all(Some(&format!("create journal {}", &today))).unwrap();
 
                 match env::current_dir().unwrap().to_str() {
                     Some(dir) => neovim.command(&format!("cd {}", dir)).await.unwrap(),
