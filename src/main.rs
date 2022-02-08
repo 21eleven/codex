@@ -12,7 +12,7 @@ mod node;
 mod nvim;
 mod tree;
 
-use git::{git_clone, fetch_and_pull};
+use git::{fetch_and_pull, git_clone};
 use node::init_codex_repo;
 use nvim::NeovimHandler;
 
