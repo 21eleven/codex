@@ -1,12 +1,14 @@
-use crate::git::{checkout_branch, commit_any, repo};
+use crate::git::{checkout_branch, commit_all, commit_any, repo};
 use chrono::Local;
 use git2::build::RepoBuilder;
 use git2::{Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository};
 use log::*;
 use std::env;
 use std::path::Path;
+
 pub fn push_to_git_remote() -> Result<(), git2::Error> {
-    commit_any(None)?;
+    // commit_any(None)?; -- not currently working
+    commit_all(None);
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
