@@ -52,9 +52,8 @@ impl Handler for NeovimHandler {
                 handle_git_branching().unwrap();
                 commit_all(Some(&format!("create journal {}", &today))).unwrap();
 
-                match env::current_dir().unwrap().to_str() {
-                    Some(dir) => neovim.command(&format!("cd {}", dir)).await.unwrap(),
-                    None => {}
+                if let Some(dir) = env::current_dir().unwrap().to_str() {
+                    neovim.command(&format!("cd {}", dir)).await.unwrap()
                 }
                 // let today = tree.today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
