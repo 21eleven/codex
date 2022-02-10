@@ -1,12 +1,10 @@
 use async_trait::async_trait;
-use git2::{DiffFormat, Repository};
 use log::*;
 use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
 use std::sync::Arc;
 
 use crate::tree;
 use crate::tree::next_sibling_id;
-use chrono::Local;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::diff::{
     diff_w_last_commit, diff_w_last_commit_report, diff_w_main, diff_w_main_report,
@@ -18,7 +16,6 @@ use crate::git::{
 use crate::node::power_of_ten;
 use rmpv::Value;
 use std::env;
-use std::path::PathBuf;
 use std::sync::Mutex;
 use tokio::io::Stdout;
 use tokio::time;
