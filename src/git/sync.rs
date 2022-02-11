@@ -92,7 +92,7 @@ pub fn git_clone(url: &str) -> Result<(), git2::Error> {
 pub fn fetch_and_pull() -> Result<(), git2::Error> {
     let repo = repo()?;
     let mut remote = repo.find_remote("origin")?;
-    let today_branch_name = Local::now().format("%Y%m%d").to_string();
+    // let today_branch_name = Local::now().format("%Y%m%d").to_string();
     // TODO need to get default branch from git2::Config::open_global()
     let main_commit = do_fetch(
         &repo,
@@ -167,7 +167,7 @@ fn do_fetch<'a>(
     }
 
     let fetch_head = repo.find_reference("FETCH_HEAD")?;
-    Ok(repo.reference_to_annotated_commit(&fetch_head)?)
+    repo.reference_to_annotated_commit(&fetch_head)
 }
 
 fn fast_forward(
@@ -268,7 +268,7 @@ fn do_merge<'a>(
     } else if analysis.0.is_normal() {
         // do a normal merge
         let head_commit = repo.reference_to_annotated_commit(&repo.head()?)?;
-        normal_merge(&repo, &head_commit, &fetch_commit)?;
+        normal_merge(repo, &head_commit, &fetch_commit)?;
     } else {
         debug!("local in sync w remote, nothing to pull");
     }

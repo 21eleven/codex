@@ -70,11 +70,11 @@ impl Handler for NeovimHandler {
             }
             "diff_report" => {
                 let report = diff_w_main_report().unwrap();
-                debug!("Diff Report (vs main): {:?}", report);
+                debug!("Diff Report (vs main): {}", report);
             }
             "diff_last_report" => {
                 let report = diff_w_last_commit_report().unwrap();
-                debug!("Diff Report (vs last commit): {:?}", report);
+                debug!("Diff Report (vs last commit): {}", report);
             }
             "stage" => {
                 stage_all().unwrap();
@@ -122,15 +122,12 @@ impl Handler for NeovimHandler {
             "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
                 let tree = &*self.tree.lock().unwrap();
-                match args.as_slice() {
-                    &[Some(node_ref)] => {
-                        debug!(
-                            "{:?}: {}",
-                            node_ref,
-                            tree.nodes.get(&node_ref.to_string()).unwrap()
-                        );
+                if let [Some(node_ref)] = args.as_slice() {
+                    if let Some(node) = tree.nodes.get(&node_ref.to_string()) {
+                        debug!("{:?}: {}", node_ref, node);
+                    } else {
+                        debug!("{:?} not found", node_ref);
                     }
-                    _ => {}
                 }
             }
             "pow" => {

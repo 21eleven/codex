@@ -228,7 +228,7 @@ impl Tree {
         let today = Local::now().format("%a %b %d %Y");
         let journal = self.journal.clone();
         let journal_node = self.nodes.get(&self.journal).unwrap();
-        if journal_node.children.len() == 0 {
+        if journal_node.children.is_empty() {
             debug!("creating first day node: {}", &today);
             return self
                 .create_node(Some(&journal), Some(&today.to_string()))
@@ -251,10 +251,10 @@ impl Tree {
     pub fn node_creation(&mut self, args: Vec<Value>) {
         let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
         match args.as_slice() {
-            &[Some(parent), Some(child)] => {
+            [Some(parent), Some(child)] => {
                 self.create_node(Some(parent), Some(child)).unwrap();
             }
-            &[Some(node_name)] => {
+            [Some(node_name)] => {
                 self.create_node(None, Some(node_name)).unwrap();
             }
             _ => {
@@ -282,104 +282,99 @@ impl Tree {
                     let child_id = child.id.clone();
                     self.nodes.insert(child.id.clone(), child);
                     let parent_ref = get_parent(&child_id).unwrap();
-                    match power_of_ten(get_node_key_number(&child_id)) {
-                        Some(n) => {
-                            // this newly created node is a power of 10 node
-                            // we must go to all the siblings and rename them
-                            // TODO make this section more DRY
-                            let repo = Repository::open("./").unwrap();
-                            let siblings =
-                                self.nodes.get_mut(&parent_ref).unwrap().children.clone();
-                            for idx in 0..siblings.len() {
-                                if &siblings[idx] == &child_id {
-                                    // the new nodes is named in the
-                                    // siblings vec, it does not need
-                                    // rename
-                                    continue;
-                                }
-                                // get current name of siblings
-                                let sibid = &siblings[idx].clone();
-                                // TODO make this a function -> (u64, &str)
-                                let (base, node) = sibid.rsplit_once('/').unwrap();
-                                let (x, name_path) = node.split_once('-').unwrap();
-                                let x = x.parse::<u64>().unwrap();
-                                // new name of sibling
-                                let newid = format!(
-                                    "{}/{:0width$}-{}",
-                                    base,
-                                    x,
-                                    name_path,
-                                    width = (n as usize) + 1
-                                );
-                                // remove sib node w old key from map
-                                let mut node_clone = self.nodes.remove(sibid).unwrap();
-                                // node_clone.mv(newid.clone());
-                                node_clone.id = newid.clone();
-                                debug!("renaming {:?} to {:?}", sibid, &newid);
-                                let old_path = PathBuf::from(".").join(&sibid);
-                                let new_path = PathBuf::from(".").join(&newid);
-                                // move sib node on fs
-                                rename(old_path, new_path).unwrap();
-                                // link is another node
-                                // that this node points to in its content
-                                for link in &node_clone.links {
-                                    let linked = self.nodes.get_mut(link).unwrap();
-                                    linked.rename_backlink(&sibid, &newid);
-                                }
-                                // a backlink is a node that has a link
-                                // in its content that points to this node
-                                for backlink in &node_clone.backlinks {
-                                    let backlinked = self.nodes.get_mut(backlink).unwrap();
-                                    backlinked.rename_link(&sibid, &newid);
-                                }
-                                // all children need to be renamed since their
-                                // parent has a new id and that suffixes their
-                                // id
-                                // could refactor this to have the renameing based on
-                                // width happen in here
-                                fn rename_dfs(
-                                    node_ref: &NodeKey,
-                                    parent: &NodeKey,
-                                    map: &mut BTreeMap<NodeKey, Node>,
-                                ) -> NodeKey {
-                                    // remove child from amp
-                                    let mut node = map.remove(node_ref).unwrap();
-                                    let (_, node_name) = node_ref.rsplit_once('/').unwrap();
-                                    // calc new name
-                                    let newid = format!("{}/{}", parent, node_name,);
-                                    // inform links
-                                    for link in &node.links {
-                                        let linked = map.get_mut(link).unwrap();
-                                        linked.rename_backlink(&node_ref, &newid);
-                                    }
-                                    for backlink in &node.backlinks {
-                                        let backlinked = map.get_mut(backlink).unwrap();
-                                        backlinked.rename_link(&node_ref, &newid);
-                                    }
-                                    node.parent = Some(parent.to_string());
-                                    node.id = newid.clone();
-                                    for i in 0..node.children.len() {
-                                        node.children[i] =
-                                            rename_dfs(&node.children[i], &newid, map)
-                                    }
-                                    node.write_meta();
-                                    map.insert(newid.clone(), node);
-                                    newid
-                                }
-                                for i in 0..node_clone.children.len() {
-                                    node_clone.children[i] =
-                                        rename_dfs(&node_clone.children[i], &newid, &mut self.nodes)
-                                }
-                                self.nodes.insert(newid, node_clone);
+                    if let Some(n) = power_of_ten(get_node_key_number(&child_id)) {
+                        // this newly created node is a power of 10 node
+                        // we must go to all the siblings and rename them
+                        // TODO make this section more DRY
+                        let repo = Repository::open("./").unwrap();
+                        let siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
+                        for idx in 0..siblings.len() {
+                            if &siblings[idx] == &child_id {
+                                // the new nodes is named in the
+                                // siblings vec, it does not need
+                                // rename
+                                continue;
                             }
-                            commit_paths(
-                                &repo,
-                                vec![&Path::new("./*")],
-                                &format!("node renames due to new power of ten node {}", child_id),
-                            )
-                            .unwrap();
+                            // get current name of siblings
+                            let sibid = &siblings[idx].clone();
+                            // TODO make this a function -> (u64, &str)
+                            let (base, node) = sibid.rsplit_once('/').unwrap();
+                            let (x, name_path) = node.split_once('-').unwrap();
+                            let x = x.parse::<u64>().unwrap();
+                            // new name of sibling
+                            let newid = format!(
+                                "{}/{:0width$}-{}",
+                                base,
+                                x,
+                                name_path,
+                                width = (n as usize) + 1
+                            );
+                            // remove sib node w old key from map
+                            let mut node_clone = self.nodes.remove(sibid).unwrap();
+                            // node_clone.mv(newid.clone());
+                            node_clone.id = newid.clone();
+                            debug!("renaming {:?} to {:?}", sibid, &newid);
+                            let old_path = PathBuf::from(".").join(&sibid);
+                            let new_path = PathBuf::from(".").join(&newid);
+                            // move sib node on fs
+                            rename(old_path, new_path).unwrap();
+                            // link is another node
+                            // that this node points to in its content
+                            for link in &node_clone.links {
+                                let linked = self.nodes.get_mut(link).unwrap();
+                                linked.rename_backlink(sibid, &newid);
+                            }
+                            // a backlink is a node that has a link
+                            // in its content that points to this node
+                            for backlink in &node_clone.backlinks {
+                                let backlinked = self.nodes.get_mut(backlink).unwrap();
+                                backlinked.rename_link(sibid, &newid);
+                            }
+                            // all children need to be renamed since their
+                            // parent has a new id and that suffixes their
+                            // id
+                            // could refactor this to have the renameing based on
+                            // width happen in here
+                            fn rename_dfs(
+                                node_ref: &NodeKey,
+                                parent: &NodeKey,
+                                map: &mut BTreeMap<NodeKey, Node>,
+                            ) -> NodeKey {
+                                // remove child from amp
+                                let mut node = map.remove(node_ref).unwrap();
+                                let (_, node_name) = node_ref.rsplit_once('/').unwrap();
+                                // calc new name
+                                let newid = format!("{}/{}", parent, node_name,);
+                                // inform links
+                                for link in &node.links {
+                                    let linked = map.get_mut(link).unwrap();
+                                    linked.rename_backlink(node_ref, &newid);
+                                }
+                                for backlink in &node.backlinks {
+                                    let backlinked = map.get_mut(backlink).unwrap();
+                                    backlinked.rename_link(node_ref, &newid);
+                                }
+                                node.parent = Some(parent.to_string());
+                                node.id = newid.clone();
+                                for i in 0..node.children.len() {
+                                    node.children[i] = rename_dfs(&node.children[i], &newid, map)
+                                }
+                                node.write_meta();
+                                map.insert(newid.clone(), node);
+                                newid
+                            }
+                            for i in 0..node_clone.children.len() {
+                                node_clone.children[i] =
+                                    rename_dfs(&node_clone.children[i], &newid, &mut self.nodes)
+                            }
+                            self.nodes.insert(newid, node_clone);
                         }
-                        None => {}
+                        commit_paths(
+                            &repo,
+                            vec![Path::new("./*")],
+                            &format!("node renames due to new power of ten node {}", child_id),
+                        )
+                        .unwrap();
                     }
                     Ok(child_id)
                 } else {
