@@ -1,15 +1,14 @@
-use crate::tree::{self, next_sibling_id, Tree};
+use crate::tree::next_sibling_id;
 use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::convert::TryInto;
-use std::fs::{self, create_dir, read_to_string, File, OpenOptions};
-use std::io;
+use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
-use crate::git::commit_paths;
+use crate::git::{commit_paths, stage_paths};
 use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
@@ -18,10 +17,10 @@ use std::fmt;
 // struct HierarchicalIdentifier {
 //     codex_path: String
 // }
-pub enum Entry {
-    Page,
-    Todo,
-}
+// pub enum Entry {
+//     Page,
+//     Todo,
+// }
 
 pub fn power_of_ten(mut n: u64) -> Option<u64> {
     let mut pow = 1;
@@ -39,9 +38,7 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     }
 }
 
-type Entity = Box<Node>;
 
-pub type NodeRef = PathBuf;
 pub type NodeKey = String;
 
 #[derive(Debug, Clone)]
@@ -143,6 +140,8 @@ impl Node {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => debug!("successfully wrote to {}", display),
         }
+        // stage new node/directory in git repo
+        stage_paths(vec![&directory.join("*")]).unwrap();
         node
     }
     pub fn from_tree(
