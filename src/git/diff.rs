@@ -159,7 +159,6 @@ pub fn diff_report(repo: &Repository, commit: &Commit) -> Result<String, git2::E
         })
         .unwrap();
     let output = report.report();
-    debug!("diff report output String: {:?}", &output);
 
     Ok(output)
 }
