@@ -141,7 +141,8 @@ impl Node {
             Ok(_) => debug!("successfully wrote to {}", display),
         }
         // stage new node/directory in git repo
-        stage_paths(vec![&directory.join("*")]).unwrap();
+        // debug!("STAGING: {:?}", &directory.join("*"));
+        // stage_paths(vec![&directory.join("*")]).unwrap();
         node
     }
     pub fn from_tree(

@@ -1,4 +1,4 @@
-use crate::git::commit_paths;
+use crate::git::{commit_paths, stage_all};
 use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeMeta};
 use chrono::Local;
 use git2::Repository;
@@ -281,6 +281,7 @@ impl Tree {
                     // a new node is created, it has a parent
                     let child_id = child.id.clone();
                     self.nodes.insert(child.id.clone(), child);
+                    stage_all().unwrap();
                     let parent_ref = get_parent(&child_id).unwrap();
                     if let Some(n) = power_of_ten(get_node_key_number(&child_id)) {
                         // this newly created node is a power of 10 node
@@ -391,6 +392,7 @@ impl Tree {
                 let node = Node::create(node_name.to_string(), None);
                 let node_id = node.id.clone();
                 self.nodes.insert(node_id.clone(), node);
+                stage_all().unwrap();
                 Ok(node_id)
             }
             _ => {

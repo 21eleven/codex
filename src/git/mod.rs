@@ -18,8 +18,11 @@ pub fn repo() -> Result<Repository, git2::Error> {
 pub fn stage_paths(paths: Vec<&Path>) -> Result<(), git2::Error> {
     let repo = repo()?;
     let mut index = repo.index()?;
-    index.add_all(paths, git2::IndexAddOption::DEFAULT, None)?;
+    index.add_all(&paths, git2::IndexAddOption::DEFAULT, None)?;
+    index.update_all(paths, None)?;
     index.write()?;
+    // what is the difference between write and write_tree
+    index.write_tree()?;
     Ok(())
 }
 
