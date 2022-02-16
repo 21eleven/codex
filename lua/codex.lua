@@ -84,6 +84,11 @@ function M.nodes()
   return picker:find()
 end
 
+function M.todo()
+  local ln = vim.api.nvim_get_current_line()
+  vim.api.nvim_set_current_line(" - [] " .. ln)
+end
+
 function M.plugin_dir()
     return plugin_dir
 end
