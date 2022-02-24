@@ -86,8 +86,25 @@ end
 
 function M.todo()
   local ln = vim.api.nvim_get_current_line()
-  vim.api.nvim_set_current_line(" - [] " .. ln)
+  if string.match(ln, "- %[%]") then
+    ln = string.gsub(ln, "- %[%]", "- ✅", 1)
+  elseif string.match(ln, "- ✅")  then
+    ln = string.gsub(ln, "- ✅", "- %[%]", 1)
+  elseif string.match(ln, "- ")  then
+    ln = string.gsub(ln, "- ", "- %[%] ", 1)
+  elseif string.match(ln, "%a") then
+    local idx = string.find(ln, "%a", 1)
+    if idx == 1 then
+      ln = "- [] " .. ln
+    else
+      ln = string.sub(ln, 0, idx-1) .. "- [] " .. string.sub(ln, idx)
+    end
+  else
+    ln = ln .. "- [] "
+  end
+  vim.api.nvim_set_current_line(ln)
 end
+map('n', '<leader>t', ':lua Codex["todo"]()<CR>', opt)
 
 function M.plugin_dir()
     return plugin_dir
