@@ -105,6 +105,8 @@ function M.todo()
   vim.api.nvim_set_current_line(ln)
 end
 map('n', '<leader>t', ':lua Codex["todo"]()<CR>', opt)
+map('i', '<C-t>', ':lua Codex["todo"]()<CR>', opt)
+map('n', '<leader>f', ":lua Codex.nodes() <CR>", opt)
 
 function M.plugin_dir()
     return plugin_dir
