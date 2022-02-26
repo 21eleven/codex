@@ -38,6 +38,16 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     }
 }
 
+#[test]
+fn test_power_of_ten() {
+    assert_eq!(power_of_ten(0), None);
+    assert_eq!(power_of_ten(9), None);
+    assert_eq!(power_of_ten(11), None);
+    assert_eq!(power_of_ten(10), Some(1));
+    assert_eq!(power_of_ten(100), Some(2));
+    assert_eq!(power_of_ten(100_000), Some(5));
+}
+
 fn format_display_name(name: &str) -> String {
     name.split("/")
         .map(|part| part.split_once('-').unwrap().1.replace("-", " "))
