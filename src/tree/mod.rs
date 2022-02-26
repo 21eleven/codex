@@ -248,17 +248,16 @@ impl Tree {
                 .unwrap()
         }
     }
-    pub fn node_creation(&mut self, args: Vec<Value>) {
+    pub fn node_creation(&mut self, args: Vec<Value>) -> Result<NodeKey> {
         let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
         match args.as_slice() {
-            [Some(parent), Some(child)] => {
-                self.create_node(Some(parent), Some(child)).unwrap();
-            }
-            [Some(node_name)] => {
-                self.create_node(None, Some(node_name)).unwrap();
-            }
+            [Some(parent), Some(child)] => Ok(self.create_node(Some(parent), Some(child)).unwrap()),
+            [Some(node_name)] => Ok(self.create_node(None, Some(node_name)).unwrap()),
             _ => {
                 error!("invalid args to create: {:?}", args);
+                Err(Box::new(TreeError {
+                    err_text: format!("invalid args to node_creation: {:?}", args),
+                }))
             }
         }
     }

@@ -44,6 +44,8 @@ impl Handler for NeovimHandler {
     type Writer = Compat<Stdout>;
 
     async fn handle_notify(&self, name: String, _args: Vec<Value>, neovim: Neovim<Compat<Stdout>>) {
+        // could make a sync fn that handles RPC commit_all
+        // and also handles Err results
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
@@ -116,8 +118,13 @@ impl Handler for NeovimHandler {
             }
             "create" => {
                 debug!("{:?}", _args);
-                let tree = &mut *self.tree.lock().unwrap();
-                tree.node_creation(_args);
+                // weird error i don't understack if I uncomment this...
+                // let tree = &mut *self.tree.lock().unwrap();
+                let new_node_key = self.tree.lock().unwrap().node_creation(_args).unwrap();
+                neovim
+                    .command(&format!("e {}/_.md", new_node_key))
+                    .await
+                    .unwrap();
             }
             "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
