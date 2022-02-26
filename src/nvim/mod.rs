@@ -21,6 +21,36 @@ use std::sync::Mutex;
 use tokio::io::Stdout;
 use tokio::time;
 
+pub trait Telescoped {
+    fn entry(&self) -> Value;
+}
+
+fn telescope_nodes(tree: &tree::Tree) -> Value {
+    Value::Array(
+        tree.nodes
+            .values()
+            // impl DeRef to Value?
+            .map(|n| n.entry())
+            .collect(),
+    )
+}
+
+fn telescope_child_nodes(id: &str, tree: &tree::Tree) -> Value {
+    // impl use lua data type?
+    // impl nvim data trait?
+    match tree.nodes.get(id) {
+        Some(node) => Value::Array(node.children.iter().map(|key| key.entry()).collect()),
+        None => Value::Nil,
+    }
+}
+
+fn node_parent(id: &str, tree: &tree::Tree) -> Option<String> {
+    match tree.nodes.get(id) {
+        Some(node) => node.parent.clone(),
+        None => None,
+    }
+}
+
 #[derive(Clone)]
 pub struct NeovimHandler {
     pub tree: Arc<Mutex<tree::Tree>>,
@@ -182,7 +212,7 @@ impl Handler for NeovimHandler {
         &self,
         name: String,
         _args: Vec<Value>,
-        _neovim: Neovim<Compat<Stdout>>,
+        neovim: Neovim<Compat<Stdout>>,
     ) -> Result<Value, Value> {
         debug!("in request handler");
         match name.as_str() {
@@ -196,17 +226,21 @@ impl Handler for NeovimHandler {
                 debug!("woke up, closing");
                 Ok(Value::Nil)
             }
-            "nodes" => {
-                let tree = &*self.tree.lock().unwrap();
-                // let mut nodes: Vec<&str> = tree
-                let nodes: Vec<String> = tree.nodes.keys().map(|id| id.to_string()).collect();
-                // since I am sorting here maybe I should
-                // switch from HashMap to BTreeMap
-                // nodes.sort_unstable();
-
-                Ok(Value::Array(
-                    nodes.into_iter().map(|s| Value::String(s.into())).collect(),
-                ))
+            "nodes" => Ok(telescope_nodes(&*self.tree.lock().unwrap())),
+            "children" => {
+                debug!("{:?}", _args);
+                let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
+                Ok(telescope_child_nodes(args[0], &*self.tree.lock().unwrap()))
+            }
+            "parent" => {
+                debug!("{:?}", _args);
+                let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
+                if let Some(parent) = node_parent(args[0], &*self.tree.lock().unwrap()) {
+                    debug!("found parent: {}", parent);
+                    Ok(Value::String(parent.into()))
+                } else {
+                    Ok(Value::Nil)
+                }
             }
             _ => Ok(Value::Nil),
         }

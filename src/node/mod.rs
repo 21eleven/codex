@@ -1,6 +1,8 @@
+use crate::nvim::Telescoped;
 use crate::tree::next_sibling_id;
 use chrono::{DateTime, Local};
 use log::*;
+use nvim_rs::Value;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::{create_dir, read_to_string, File, OpenOptions};
@@ -56,11 +58,26 @@ fn format_display_name(name: &str) -> String {
 
 pub type NodeKey = String;
 
+impl Telescoped for NodeKey {
+    fn entry(&self) -> Value {
+        Value::Map(vec![
+            (
+                Value::String("id".into()),
+                Value::String(self.clone().into()),
+            ),
+            (
+                Value::String("display".into()),
+                Value::String(format_display_name(self).into()),
+            ),
+        ])
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Node {
     pub id: NodeKey,
     pub name: String,
-    // pub display_name: String,
+    pub display_name: String,
     pub parent: Option<NodeKey>,
     pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
     pub links: HashSet<NodeKey>,
@@ -118,6 +135,7 @@ impl Node {
         };
         let now = Local::now();
         Node {
+            display_name: format_display_name(&node_key),
             id: node_key,
             name,
             parent: parent_option,
@@ -170,6 +188,7 @@ impl Node {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
         Node {
+            display_name: format_display_name(&id),
             id,
             name,
             parent,
@@ -246,6 +265,20 @@ impl Node {
     }
     fn tag(&mut self, new_tag: String) {
         self.tags.insert(new_tag);
+    }
+}
+impl Telescoped for Node {
+    fn entry(&self) -> Value {
+        Value::Map(vec![
+            (
+                Value::String("id".into()),
+                Value::String(self.id.clone().into()),
+            ),
+            (
+                Value::String("display".into()),
+                Value::String(self.display_name.clone().into()),
+            ),
+        ])
     }
 }
 

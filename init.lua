@@ -19,6 +19,9 @@ vim.cmd [[packadd packer.nvim]]
 opt = vim.opt
 g = vim.g
 
+vim.o.autowriteall = true;
+
+
 function map(mode, lhs, rhs, opts)
   local options = {noremap = true}
   if opts then options = vim.tbl_extend('force', options, opts) end
