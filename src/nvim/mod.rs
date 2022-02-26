@@ -8,6 +8,7 @@ use crate::tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use crate::git::diff::{
     diff_w_last_commit, diff_w_last_commit_report, diff_w_main, diff_w_main_report,
+    repo_is_modified,
 };
 use crate::git::{
     commit_all, get_last_commit_of_branch, handle_git_branching, push_to_git_remote, repo,
@@ -61,6 +62,9 @@ impl Handler for NeovimHandler {
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 debug!("git remote url {:?}", std::env::var("CODEX_GIT_REMOTE"));
                 on_start(neovim).await;
+            }
+            "has_diff" => {
+                debug!("has diffs? {}", repo_is_modified().unwrap());
             }
             "diff" => {
                 let added = diff_w_main().unwrap();
@@ -182,8 +186,10 @@ impl Handler for NeovimHandler {
         debug!("in request handler");
         match name.as_str() {
             "stop" => {
-                push_to_git_remote().unwrap();
-                info!("local pushed to remote");
+                if repo_is_modified().unwrap() {
+                    push_to_git_remote().unwrap();
+                    info!("local pushed to remote");
+                }
                 let mut interval = time::interval(time::Duration::from_secs(3));
                 interval.tick().await;
                 debug!("woke up, closing");

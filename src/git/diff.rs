@@ -101,6 +101,13 @@ pub fn diff_w_last_commit() -> Result<u64, git2::Error> {
     diff_w_commit(&repo, &commit)
 }
 
+pub fn repo_is_modified() -> Result<bool, git2::Error> {
+    let repo = repo()?;
+    let commit = find_last_commit(&repo).unwrap();
+    let diff = repo.diff_tree_to_workdir_with_index(Some(&commit.tree().unwrap()), None)?;
+    Ok(diff.deltas().count() != 0)
+}
+
 pub fn diff_w_commit(repo: &Repository, commit: &Commit) -> Result<u64, git2::Error> {
     let diffs = diff(repo, commit)?;
     let mut word_diff = DiffWords::new();
