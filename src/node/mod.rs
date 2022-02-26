@@ -3,12 +3,11 @@ use chrono::{DateTime, Local};
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 mod date_serde;
-use crate::git::{commit_paths, stage_paths};
+use crate::git::commit_paths;
 use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
@@ -49,7 +48,7 @@ fn test_power_of_ten() {
 }
 
 fn format_display_name(name: &str) -> String {
-    name.split("/")
+    name.split('/')
         .map(|part| part.split_once('-').unwrap().1.replace("-", " "))
         .collect::<Vec<String>>()
         .join(" / ")
@@ -73,25 +72,25 @@ pub struct Node {
 }
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Node({}): {{\n", self.name)?;
-        write!(f, "\t id: {}\n", self.id)?;
-        write!(
+        writeln!(f, "Node({}): {{", self.name)?;
+        writeln!(f, "\t id: {}", self.id)?;
+        writeln!(
             f,
-            "\t parent: {}\n",
+            "\t parent: {}",
             match &self.parent {
                 Some(parent) => parent,
                 None => "None",
             }
         )?;
-        write!(f, "\t children: {:?}\n", self.children)?;
-        write!(f, "\t links: {:?}\n", self.links)?;
-        write!(f, "\t backlinks: {:?}\n", self.backlinks)?;
-        write!(f, "\t tags: {:?}\n", self.tags)?;
-        write!(f, "}}\n")?;
+        writeln!(f, "\t children: {:?}", self.children)?;
+        writeln!(f, "\t links: {:?}", self.links)?;
+        writeln!(f, "\t backlinks: {:?}", self.backlinks)?;
+        writeln!(f, "\t tags: {:?}", self.tags)?;
+        writeln!(f, "}}")?;
         Ok(())
     }
 }
-pub fn prepare_path_name(node_name: &String) -> String {
+pub fn prepare_path_name(node_name: &str) -> String {
     node_name
         // .to_ascii_lowercase()
         .chars()
@@ -175,11 +174,8 @@ impl Node {
             name,
             parent,
             children,
-            links: links.into_iter().map(|p| p.try_into().unwrap()).collect(),
-            backlinks: backlinks
-                .into_iter()
-                .map(|p| p.try_into().unwrap())
-                .collect(),
+            links: links.into_iter().collect(),
+            backlinks: backlinks.into_iter().collect(),
             tags: tags.into_iter().collect(),
             created,
             updated,
@@ -196,7 +192,7 @@ impl Node {
         self.id = new_path;
         todo!();
     }
-    pub fn rename_link(&mut self, old_name: &NodeKey, new_name: &NodeKey) {
+    pub fn rename_link(&mut self, old_name: &str, new_name: &str) {
         // TODO rename all instances of the link in the content file
         // for i in 0..self.links.len() {
         // should links be a hashset?
@@ -209,7 +205,7 @@ impl Node {
         self.links.insert(new_name.to_string());
         self.write_meta();
     }
-    pub fn rename_backlink(&mut self, old_name: &NodeKey, new_name: &NodeKey) {
+    pub fn rename_backlink(&mut self, old_name: &str, new_name: &str) {
         self.backlinks.remove(old_name);
         self.backlinks.insert(new_name.to_string());
         self.write_meta();
@@ -223,7 +219,7 @@ impl Node {
     }
     pub fn write_meta(&self) {
         let metadata = Path::new("./").join(&self.id).join("meta.toml");
-        let meta_toml = NodeMeta::from(&self).to_toml();
+        let meta_toml = NodeMeta::from(self).to_toml();
         let display = metadata.display();
         let mut file = OpenOptions::new()
             .write(true)
@@ -244,7 +240,7 @@ impl Node {
         self.updated = now;
     }
     pub fn create_child(&mut self, name: String) -> Node {
-        let child = Node::create(name, Some(&self));
+        let child = Node::create(name, Some(self));
         self.children.push(child.id.clone());
         child
     }
@@ -336,7 +332,7 @@ pub fn init_codex_repo() -> Repository {
     desk.tag(String::from("desk"));
     desk.write_meta();
     debug!("created desk: {}", desk);
-    commit_paths(&repo, vec![&Path::new("./*")], "codex init").unwrap();
+    commit_paths(&repo, vec![Path::new("./*")], "codex init").unwrap();
     debug!("codex git repo initialized");
     repo
 }
