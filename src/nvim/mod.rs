@@ -11,8 +11,8 @@ use crate::git::diff::{
     repo_is_modified,
 };
 use crate::git::{
-    commit_all, get_last_commit_of_branch, handle_git_branching, push_to_git_remote, repo,
-    stage_all,
+    commit_all, fetch_and_pull, get_last_commit_of_branch, handle_git_branching,
+    push_to_git_remote, repo, stage_all,
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -50,18 +50,19 @@ impl Handler for NeovimHandler {
         match name.as_ref() {
             "start" => {
                 log::debug!("starting CODEX!");
-                debug!("pwd: {:?}", std::env::current_dir().unwrap());
-                let today = self.tree.lock().unwrap().today_node();
-                neovim.command(&format!("e {}/_.md", today)).await.unwrap();
-                handle_git_branching().unwrap();
-                // stage_all().unwrap();
-
                 if let Some(dir) = env::current_dir().unwrap().to_str() {
                     neovim.command(&format!("cd {}", dir)).await.unwrap()
                 }
+                debug!("pwd: {:?}", std::env::current_dir().unwrap());
+                let today = self.tree.lock().unwrap().today_node();
+                neovim.command(&format!("e {}/_.md", today)).await.unwrap();
+                on_start(neovim).await;
+                fetch_and_pull().unwrap();
+                handle_git_branching().unwrap();
+                // stage_all().unwrap();
+
                 // let today = tree.today_node();
                 debug!("git remote url {:?}", std::env::var("CODEX_GIT_REMOTE"));
-                on_start(neovim).await;
             }
             "has_diff" => {
                 debug!("has diffs? {}", repo_is_modified().unwrap());
@@ -96,7 +97,7 @@ impl Handler for NeovimHandler {
                 debug!("{}: {:?}", branch_name, commit);
             }
             "push" => {
-                debug!("push status: {:?}", push_to_git_remote());
+                debug!("push status: {:?}", push_to_git_remote().await);
             }
             "ping" => {
                 let args_s = format!("{:?}", _args);
@@ -187,7 +188,7 @@ impl Handler for NeovimHandler {
         match name.as_str() {
             "stop" => {
                 if repo_is_modified().unwrap() {
-                    push_to_git_remote().unwrap();
+                    push_to_git_remote().await.unwrap();
                     info!("local pushed to remote");
                 }
                 let mut interval = time::interval(time::Duration::from_secs(3));

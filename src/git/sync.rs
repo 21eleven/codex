@@ -6,7 +6,7 @@ use log::*;
 use std::env;
 use std::path::Path;
 
-pub fn push_to_git_remote() -> Result<(), git2::Error> {
+pub async fn push_to_git_remote() -> Result<(), git2::Error> {
     // commit_any(None)?; -- not currently working
     commit_all(None);
     let mut push_opts = PushOptions::default();

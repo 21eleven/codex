@@ -1,5 +1,11 @@
 local M = {}
 
+local actions = require "telescope.actions"
+local action_state = require "telescope.actions.state"
+
+local Input = require("nui.input")
+local event = require("nui.utils.autocmd").event
+
 -- Would be installed where? .local/share/codex?
 local plugin_dir = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file("lua/codex.lua", false)[1], ":h:h")
 vim.fn.setenv("CODEX_HOME", plugin_dir)
@@ -79,6 +85,74 @@ function M.nodes()
         return {'/usr/bin/bat', entry.value }
       end,
     }),
+  })
+
+  return picker:find()
+end
+
+function M.new_node()
+  local nodes = M.get_nodes()
+  local Picker = require('telescope.pickers')
+  local Finder = require('telescope.finders')
+  local Sorter = require('telescope.sorters')
+  local finder_fn = Finder.new_table({
+    results = nodes,
+    entry_maker = M.entry_maker
+  })
+
+  local picker = Picker:new({
+    prompt_title = 'codex nodes',
+    finder = finder_fn,
+    sorter = Sorter.get_generic_fuzzy_sorter(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat', entry.value }
+      end,
+    }),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local selection = action_state.get_selected_entry()
+         local input = Input({
+          position = "20%",
+          size = {
+              width = 50,
+              height = 2,
+          },
+          relative = "editor",
+          border = {
+            style = "single",
+            text = {
+                top = "child under: " .. selection.display,
+                top_align = "center",
+            },
+          },
+          win_options = {
+            winblend = 10,
+            winhighlight = "Normal:Normal",
+          },
+        }, {
+          prompt = "> ",
+          default_value = "",
+          on_close = function()
+            print("Input closed!")
+          end,
+          on_submit = function(value)
+            print("New node: " .. value .. ", under: ".. selection.display)
+            M["create"](selection.display, value)
+          end,
+        })
+
+        -- mount/open the component
+        input:mount()
+
+        -- unmount component when cursor leaves buffer
+        input:on(event.BufLeave, function()
+          input:unmount()
+        end)
+      end)
+      return true
+    end,
   })
 
   return picker:find()

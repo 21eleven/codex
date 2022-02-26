@@ -33,8 +33,9 @@ require('packer').startup(function()
     'nvim-telescope/telescope.nvim',
     requires = { {'nvim-lua/plenary.nvim'} }
   }
+  use 'MunifTanjim/nui.nvim'
   Codex.config.packages(use)
 end)
-
+require('telescope').load_extension('codex')
 vim.cmd [[autocmd VimEnter * lua Codex.start()]]
 vim.cmd [[autocmd VimLeave * lua Codex.stop()]]

@@ -44,6 +44,7 @@ pub type NodeKey = String;
 pub struct Node {
     pub id: NodeKey,
     pub name: String,
+    pub display_name: String,
     pub parent: Option<NodeKey>,
     pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
     pub links: HashSet<NodeKey>,
