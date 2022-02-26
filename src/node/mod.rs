@@ -38,13 +38,20 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     }
 }
 
+fn format_display_name(name: &str) -> String {
+    name.split("/")
+        .map(|part| part.split_once('-').unwrap().1.replace("-", " "))
+        .collect::<Vec<String>>()
+        .join(" / ")
+}
+
 pub type NodeKey = String;
 
 #[derive(Debug, Clone)]
 pub struct Node {
     pub id: NodeKey,
     pub name: String,
-    pub display_name: String,
+    // pub display_name: String,
     pub parent: Option<NodeKey>,
     pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
     pub links: HashSet<NodeKey>,
@@ -322,4 +329,10 @@ pub fn init_codex_repo() -> Repository {
     commit_paths(&repo, vec![&Path::new("./*")], "codex init").unwrap();
     debug!("codex git repo initialized");
     repo
+}
+
+#[test]
+fn test_format_display_name() {
+    assert!(format_display_name("002-desk") == *"desk");
+    assert!(format_display_name("002-desk/1-cool-jazz") == *"desk / cool jazz");
 }
