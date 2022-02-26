@@ -38,7 +38,6 @@ pub fn power_of_ten(mut n: u64) -> Option<u64> {
     }
 }
 
-
 pub type NodeKey = String;
 
 #[derive(Debug, Clone)]
@@ -116,7 +115,7 @@ impl Node {
     }
     pub fn create(name: String, parent: Option<&Node>) -> Node {
         // what if directory already exists?
-        let node = Node::new(name, parent);
+        let node = Node::new(name.clone(), parent);
         let directory = Path::new("./").join(&node.id);
         let meta_toml = NodeMeta::from(&node).to_toml();
         create_dir(&directory).unwrap();
@@ -136,7 +135,7 @@ impl Node {
             Err(why) => panic!("couldn't create {}: {}", display, why),
             Ok(file) => file,
         };
-        match file.write_all("".as_bytes()) {
+        match file.write_all(format!("# {}\n", name).as_bytes()) {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => debug!("successfully wrote to {}", display),
         }
