@@ -20,6 +20,7 @@ opt = vim.opt
 g = vim.g
 
 vim.o.autowriteall = true;
+vim.o.clipboard = "unnamedplus"
 
 
 function map(mode, lhs, rhs, opts)
