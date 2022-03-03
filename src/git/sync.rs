@@ -115,7 +115,8 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
         &repo,
         &[&format!(
             "+refs/heads/{}:refs/heads/{}",
-            &most_recent_active_branch, &most_recent_active_branch
+            &most_recent_active_branch.trim(),
+            &most_recent_active_branch.trim()
         )],
         &mut remote,
     )?;
