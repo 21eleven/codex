@@ -80,11 +80,11 @@ function M.nodes()
     prompt_title = 'codex nodes',
     finder = finder_fn,
     sorter = Sorter.get_generic_fuzzy_sorter(),
-    -- previewer = require('telescope.previewers').new_termopen_previewer({
-    --   get_command = function(entry)
-    --     return {'/usr/bin/bat', entry.value }
-    --   end,
-    -- }),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat', entry.value }
+      end,
+    }),
   })
 
   return picker:find()
@@ -95,6 +95,7 @@ function M.new_node()
   local Picker = require('telescope.pickers')
   local Finder = require('telescope.finders')
   local Sorter = require('telescope.sorters')
+  local Previewer = require('telescope.previewers')
   local finder_fn = Finder.new_table({
     results = nodes,
     entry_maker = M.entry_maker
@@ -104,11 +105,12 @@ function M.new_node()
     prompt_title = 'codex nodes',
     finder = finder_fn,
     sorter = Sorter.get_generic_fuzzy_sorter(),
-    -- previewer = require('telescope.previewers').new_termopen_previewer({
-    --   get_command = function(entry)
-    --     return {'/usr/bin/bat', entry.value }
-    --   end,
-    -- }),
+    -- previewer = Previewer.vim_buffer_cat.new(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat -n', entry.value }
+      end,
+    }),
     attach_mappings = function(prompt_bufnr, map)
       actions.select_default:replace(function()
         actions.close(prompt_bufnr)
@@ -139,7 +141,7 @@ function M.new_node()
           end,
           on_submit = function(value)
             print("New node: " .. value .. ", under: ".. selection.display)
-            M["create"](selection.display, value)
+            M["create"](selection.ordinal, value)
           end,
         })
 
@@ -192,7 +194,7 @@ end
 function M.parent()
   local curr_node = string.gsub(vim.fn.expand("%"), "/_.md", "")
   local parent = vim.rpcrequest(_t.job_id, "parent", curr_node)
-  vim.cmd("e " .. parent .. "_.md")
+  vim.cmd("e " .. parent .. "/_.md")
 end
 
 function M.children()
@@ -201,6 +203,7 @@ function M.children()
   local Picker = require('telescope.pickers')
   local Finder = require('telescope.finders')
   local Sorter = require('telescope.sorters')
+  local Previewer = require('telescope.previewers')
   local finder_fn = Finder.new_table({
     results = nodes,
     entry_maker = M.entry_maker
@@ -210,11 +213,12 @@ function M.children()
     prompt_title = 'children',
     finder = finder_fn,
     sorter = Sorter.get_generic_fuzzy_sorter(),
-    -- previewer = require('telescope.previewers').new_termopen_previewer({
-    --   get_command = function(entry)
-    --     return {'/usr/bin/bat', entry.value }
-    --   end,
-    -- }),
+    -- previewer = Previewer.vim_buffer_cat.new(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat -n', entry.value }
+      end,
+    }),
   })
   return picker:find()
 end
