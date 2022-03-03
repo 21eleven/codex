@@ -84,11 +84,11 @@ impl Handler for NeovimHandler {
                     neovim.command(&format!("cd {}", dir)).await.unwrap()
                 }
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
+                fetch_and_pull().unwrap();
+                handle_git_branching().unwrap();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 on_start(neovim).await;
-                fetch_and_pull().unwrap();
-                handle_git_branching().unwrap();
                 // stage_all().unwrap();
 
                 // let today = tree.today_node();
