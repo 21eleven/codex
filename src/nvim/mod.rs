@@ -84,11 +84,11 @@ impl Handler for NeovimHandler {
                     neovim.command(&format!("cd {}", dir)).await.unwrap()
                 }
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
+                on_start(neovim.clone()).await;
                 fetch_and_pull().unwrap();
                 handle_git_branching().unwrap();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
-                on_start(neovim).await;
                 // stage_all().unwrap();
 
                 // let today = tree.today_node();
@@ -100,6 +100,10 @@ impl Handler for NeovimHandler {
             "diff" => {
                 let added = diff_w_main().unwrap();
                 debug!("words added (vs main): {}", added);
+                neovim
+                    .command(&format!("lua print('words: {}')", added))
+                    .await
+                    .unwrap();
             }
             "diff_last" => {
                 let added = diff_w_last_commit().unwrap();
