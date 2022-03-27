@@ -25,15 +25,26 @@ fn blank_slate(tempdir: TempDir) {
     dbg!(&tempdir);
     init_codex_repo(Some(tempdir.path().to_str().unwrap()));
     assert_eq!(number_of_nodes(tempdir.path()), 2);
+    assert_eq!(nodekeys_in_dir(tempdir.path()), vec!["1-journal".to_string(), "2-desk".to_string()]);
 }
 
 #[rstest]
-fn build_tree(initialdir: TempDir) {
-    assert_eq!(number_of_nodes(initialdir.path()), 2);
-    dbg!(&initialdir);
-    let tree = Tree::build(initialdir.path().to_str().unwrap()).unwrap();
+fn build_tree(dir_and_tree: (TempDir, Tree)) {
+    let (dir, tree) = dir_and_tree;
+    assert_eq!(number_of_nodes(dir.path()), 2);
     assert_eq!(tree.nodes.keys().count(), 2);
+}
 
+
+#[rstest]
+fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
+    let dir = dir_and_tree.0;
+    let mut tree = dir_and_tree.1;
+    assert_eq!(number_of_nodes(dir.path()), 2);
+    let a = tree.create_node(Some("2-desk"), Some("a")).unwrap();
+    let b = tree.create_node(Some(&a), Some("b")).unwrap();
+    let c = tree.create_node(Some("2-desk"), Some("c")).unwrap();
+    assert_eq!(number_of_nodes(dir.path()), 5);
 }
 // fn link_nodes(tree_ab: TreeAB) {
 //     // tree_ab is a fixture struct and that hold as tree and the ids for two nodes within it

@@ -94,15 +94,15 @@ impl fmt::Debug for NodeFilesMissingError {
 
 impl error::Error for NodeFilesMissingError {}
 
-pub fn next_sibling_id(key: &String) -> u64 {
-    let path = PathBuf::from(key);
-    // could be next root dir id
-    let search_dir = match path.parent() {
-        Some(parent) => PathBuf::from("./").join(parent),
-        None => PathBuf::from("./"),
-    };
-    // TODO: check search_dir exists?
-    let metas = WalkDir::new(search_dir)
+pub fn next_sibling_id(key: &PathBuf) -> u64 {
+    // let path = PathBuf::from(key);
+    // // could be next root dir id
+    // let search_dir = match path.parent() {
+    //     Some(parent) => PathBuf::from("./").join(parent),
+    //     None => PathBuf::from("./"),
+    // };
+    // // TODO: check search_dir exists?
+    let metas = WalkDir::new(key)
         .sort_by_file_name()
         .contents_first(true)
         .min_depth(2)
@@ -283,6 +283,7 @@ impl Tree {
             (Some(parent), Some(child)) => {
                 let parent = parent.to_string();
                 debug!("parent {:?} and child {:?}", parent, child);
+                dbg!(&parent, &child);
                 let child = match self.nodes.get_mut(&parent) {
                     Some(parent) => Some(parent.create_child(child.to_string(), self.dir.to_str().unwrap())),
                     None => {
@@ -290,17 +291,18 @@ impl Tree {
                         None
                     }
                 };
+                dbg!(&child);
                 if let Some(child) = child {
                     // a new node is created, it has a parent
                     let child_id = child.id.clone();
                     self.nodes.insert(child.id.clone(), child);
-                    stage_all().unwrap();
+                    // stage_all().unwrap();
                     let parent_ref = get_parent(&child_id).unwrap();
                     if let Some(n) = power_of_ten(get_node_key_number(&child_id)) {
                         // this newly created node is a power of 10 node
                         // we must go to all the siblings and rename them
                         // TODO make this section more DRY
-                        let repo = Repository::open("./").unwrap();
+                        let repo = Repository::open(self.dir.to_str().unwrap()).unwrap();
                         let siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
                         for idx in 0..siblings.len() {
                             if &siblings[idx] == &child_id {
@@ -383,12 +385,12 @@ impl Tree {
                             }
                             self.nodes.insert(newid, node_clone);
                         }
-                        commit_paths(
-                            &repo,
-                            vec![Path::new("./*")],
-                            &format!("node renames due to new power of ten node {}", child_id),
-                        )
-                        .unwrap();
+                        // commit_paths(
+                        //     &repo,
+                        //     vec![Path::new("./*")],
+                        //     &format!("node renames due to new power of ten node {}", child_id),
+                        // )
+                        // .unwrap();
                     }
                     Ok(child_id)
                 } else {

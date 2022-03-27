@@ -129,7 +129,7 @@ impl Node {
                 (node_key, Some(parent_node.id.clone()))
             }
             None => {
-                let sibling_num = next_sibling_id(&"".to_string());
+                let sibling_num = next_sibling_id(&directory);
                 // TODO: are we handling order of mag rollover here?
                 (format!("{}-{}", sibling_num, path_name), None)
             }

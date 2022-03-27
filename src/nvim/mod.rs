@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use log::*;
 use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use crate::tree;
 use crate::tree::next_sibling_id;
@@ -89,7 +90,7 @@ impl Handler for NeovimHandler {
                 handle_git_branching().unwrap();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
-                // stage_all().unwrap();
+                stage_all().unwrap();
 
                 // let today = tree.today_node();
                 debug!("git remote url {:?}", std::env::var("CODEX_GIT_REMOTE"));
@@ -164,6 +165,7 @@ impl Handler for NeovimHandler {
                     .command(&format!("e {}/_.md", new_node_key))
                     .await
                     .unwrap();
+                stage_all().unwrap();
             }
             "node" => {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
@@ -193,7 +195,7 @@ impl Handler for NeovimHandler {
                 let args: Vec<Option<&str>> = _args.iter().map(|arg| arg.as_str()).collect();
                 match args.as_slice() {
                     &[Some(dir)] => {
-                        let id = next_sibling_id(&dir.to_string());
+                        let id = next_sibling_id(&PathBuf::from(dir.to_string()));
                         debug!("SIB ID: {}", id);
                     }
                     _ => {}
