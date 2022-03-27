@@ -20,6 +20,7 @@ pub struct Tree {
     pub nodes: BTreeMap<NodeKey, Node>,
     pub journal: NodeKey,
     pub desk: NodeKey,
+    pub dir: PathBuf,
 }
 
 impl Drop for Tree {
@@ -193,7 +194,7 @@ impl Tree {
                 Some(namepath) => {
                     // debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
-                    let node = Node::from_tree(namepath, &meta_path, parent, children);
+                    let node = Node::from_tree(namepath, &meta_path, parent, children, base.to_str().unwrap());
                     if journal.is_none() && node.tags.contains("journal") {
                         *journal = Some(node.id.clone());
                     }
@@ -221,6 +222,7 @@ impl Tree {
             nodes: node_map,
             journal: journal.unwrap(),
             desk: desk.unwrap(),
+            dir: PathBuf::from(root)
         })
     }
     pub fn today_node(&mut self) -> NodeKey {
@@ -248,6 +250,8 @@ impl Tree {
                 .unwrap()
         }
     }
+    /// Validates data from RPC call
+    /// TODO: move into a module response for linking nvim RPC calls and backend
     pub fn node_creation(&mut self, args: Vec<Value>) -> Result<NodeKey> {
         let args: Vec<Option<&str>> = args.iter().map(|arg| arg.as_str()).collect();
         match args.as_slice() {
@@ -261,6 +265,7 @@ impl Tree {
             }
         }
     }
+    /// Create a node within Codex
     pub fn create_node(&mut self, parent: Option<&str>, child: Option<&str>) -> Result<NodeKey> {
         // TODO: what would happen if the input had a '/'? sanatize
         // need to decouple this node creation on tree
@@ -270,7 +275,7 @@ impl Tree {
                 let parent = parent.to_string();
                 debug!("parent {:?} and child {:?}", parent, child);
                 let child = match self.nodes.get_mut(&parent) {
-                    Some(parent) => Some(parent.create_child(child.to_string())),
+                    Some(parent) => Some(parent.create_child(child.to_string(), self.dir.to_str().unwrap())),
                     None => {
                         error!("no node in tree named: {:?}", parent);
                         None
@@ -388,7 +393,8 @@ impl Tree {
                 // TODO what is the right way to remove this hard coding?
                 // 'static or const?
                 // TODO how to handle power of 10 rename here?
-                let node = Node::create(node_name.to_string(), None);
+                // should have a tree function for getting root siblings
+                let node = Node::create(node_name.to_string(), None, self.dir.to_str().unwrap());
                 let node_id = node.id.clone();
                 self.nodes.insert(node_id.clone(), node);
                 stage_all().unwrap();

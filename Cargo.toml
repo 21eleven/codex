@@ -24,3 +24,8 @@ toml = "0.5.*"
 walkdir = "2"
 nom = "7.0.*"
 lcs-diff = "0.1.1"
+
+
+[dev-dependencies]
+rstest = "0.12.0"
+tempfile = "3.3.0"

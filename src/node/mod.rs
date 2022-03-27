@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{PathBuf, Path};
 mod date_serde;
 use crate::git::commit_paths;
 use date_serde::codex_date_format;
@@ -86,6 +86,7 @@ pub struct Node {
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
     pub updates: u64,
+    directory: PathBuf,
 }
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -119,7 +120,7 @@ pub fn prepare_path_name(node_name: &str) -> String {
 }
 
 impl Node {
-    fn new(name: String, parent: Option<&Node>) -> Node {
+    fn new(name: String, parent: Option<&Node>, directory: PathBuf) -> Node {
         let path_name = prepare_path_name(&name);
         let (node_key, parent_option) = match parent {
             Some(parent_node) => {
@@ -146,12 +147,15 @@ impl Node {
             created: now,
             updated: now,
             updates: 1,
+            directory,
         }
     }
-    pub fn create(name: String, parent: Option<&Node>) -> Node {
+    /// Create files for a node outside of a node tree
+    /// Used to boot strap initial codex directory layout
+    pub fn create(name: String, parent: Option<&Node>, path: &str) -> Node {
         // what if directory already exists?
-        let node = Node::new(name.clone(), parent);
-        let directory = Path::new("./").join(&node.id);
+        let node = Node::new(name.clone(), parent, PathBuf::from(path));
+        let directory = Path::new(path).join(&node.id);
         let meta_toml = NodeMeta::from(&node).to_toml();
         create_dir(&directory).unwrap();
         let data = directory.join("_.md");
@@ -184,6 +188,7 @@ impl Node {
         toml_path: &Path,
         parent: Option<NodeKey>,
         children: Vec<NodeKey>,
+        directory: &str,
     ) -> Node {
         let (name, tags, links, backlinks, created, updated, updates) =
             NodeMeta::from_toml(toml_path).data();
@@ -199,6 +204,7 @@ impl Node {
             created,
             updated,
             updates,
+            directory: PathBuf::from(directory)
         }
     }
     pub fn rerank(&mut self, rank: u64) {
@@ -237,7 +243,7 @@ impl Node {
         todo!();
     }
     pub fn write_meta(&self) {
-        let metadata = Path::new("./").join(&self.id).join("meta.toml");
+        let metadata = self.directory.join(&self.id).join("meta.toml");
         let meta_toml = NodeMeta::from(self).to_toml();
         let display = metadata.display();
         let mut file = OpenOptions::new()
@@ -258,8 +264,8 @@ impl Node {
         }
         self.updated = now;
     }
-    pub fn create_child(&mut self, name: String) -> Node {
-        let child = Node::create(name, Some(self));
+    pub fn create_child(&mut self, name: String, path: &str) -> Node {
+        let child = Node::create(name, Some(self), path);
         self.children.push(child.id.clone());
         child
     }
@@ -355,18 +361,16 @@ impl NodeMeta {
     }
 }
 
-pub fn init_codex_repo() -> Repository {
-    let repo = Repository::init("./").unwrap();
-    let mut journal = Node::create("journal".to_string(), None);
+pub fn init_codex_repo(path: Option<&str>) -> Repository {
+    let path = path.unwrap_or("./");
+    let repo = Repository::init(path).unwrap();
+    let mut journal = Node::create("journal".to_string(), None, path);
     journal.tag(String::from("journal"));
     journal.write_meta();
-    debug!("created journal: {}", journal);
-    let mut desk = Node::create("desk".to_string(), None);
+    dbg!(journal);
+    let mut desk = Node::create("desk".to_string(), None, path);
     desk.tag(String::from("desk"));
     desk.write_meta();
-    debug!("created desk: {}", desk);
-    commit_paths(&repo, vec![Path::new("./*")], "codex init").unwrap();
-    debug!("codex git repo initialized");
     repo
 }
 

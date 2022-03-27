@@ -1,4 +1,5 @@
 use git2::Repository;
+use std::path::Path;
 use log::*;
 use nvim_rs::create::tokio as create;
 use std::default::Default;
@@ -12,7 +13,7 @@ mod node;
 mod nvim;
 mod tree;
 
-use git::{fetch_and_pull, git_clone};
+use git::{commit_paths, git_clone};
 use node::init_codex_repo;
 use nvim::NeovimHandler;
 
@@ -44,7 +45,9 @@ async fn main() {
                 git_clone(&git_remote_url).unwrap();
                 debug!("{} successfully cloned!", &git_remote_url);
             } else {
-                init_codex_repo();
+                let repo = init_codex_repo(None);
+                debug!("codex git repo initialized");
+                commit_paths(&repo, vec![Path::new("./*")], "codex init").unwrap();
             }
         }
     };
