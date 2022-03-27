@@ -147,7 +147,7 @@ fn get_node_key_number(node_key: &NodeKey) -> u64 {
 }
 
 impl Tree {
-    pub fn build(root: String) -> Result<Tree> {
+    pub fn build(root: &str) -> Result<Tree> {
         fn dfs(
             name: Option<NodeKey>,
             node_map: &mut BTreeMap<NodeKey, Node>,
@@ -156,11 +156,13 @@ impl Tree {
             desk: &mut Option<NodeKey>,
             base: &Path,
         ) {
-            let n = base.to_str().unwrap().chars().count();
+            let n = base.to_str().unwrap().chars().count() + 1; // plus one to factor the / char
             let search_dir = match name.clone() {
                 None => base.to_path_buf(),
                 Some(name_path) => base.join(PathBuf::from(name_path)),
             };
+            dbg!(&base, &search_dir);
+            debug!("{:?} {:?}", &base, &search_dir);
             let children = WalkDir::new(search_dir)
                 .sort_by_file_name()
                 .contents_first(true)
@@ -173,13 +175,18 @@ impl Tree {
                     e.into_path()
                         .parent()
                         .unwrap()
+                        // .file_name()
+                        // .unwrap()
                         .to_str()
                         .unwrap()
+                        // .to_string()
                         .chars()
                         .skip(n)
                         .collect::<String>()
                 })
                 .collect::<Vec<NodeKey>>();
+            dbg!(&children);
+            dbg!(&base);
             for node in children.iter() {
                 dfs(
                     Some(node.clone()),
@@ -187,7 +194,7 @@ impl Tree {
                     name.clone(),
                     journal,
                     desk,
-                    base,
+                    &base,
                 );
             }
             match name {
@@ -210,6 +217,8 @@ impl Tree {
         let mut node_map: BTreeMap<NodeKey, Node> = BTreeMap::new();
         let mut journal: Option<NodeKey> = None;
         let mut desk: Option<NodeKey> = None;
+        dbg!(root);
+        assert_ne!(root.chars().last().unwrap(), '/');
         dfs(
             None,
             &mut node_map,

@@ -34,7 +34,8 @@ async fn main() {
         return;
     }
     debug!("backend live within: {:?}", env::current_dir().unwrap());
-    match Repository::open("./") {
+    let pwd = env::current_dir().unwrap();
+    match Repository::open(&pwd) {
         Ok(_repo) => {
             // pull latest from remote, merge any updates from remote to local
             // fetch_and_pull();
@@ -51,7 +52,8 @@ async fn main() {
             }
         }
     };
-    let tree = Arc::new(Mutex::new(match tree::Tree::build("./".to_string()) {
+    let tree = Arc::new(Mutex::new(match tree::Tree::build(
+                pwd.to_str().unwrap()) {
         Ok(tree) => {
             debug!("tree gud!");
             tree
