@@ -207,6 +207,14 @@ impl Node {
             directory: PathBuf::from(directory)
         }
     }
+    pub fn link(&mut self, link: String) {
+        self.links.insert(link);
+        self.write_meta();
+    }
+    pub fn backlink(&mut self, backlink: String) {
+        self.backlinks.insert(backlink);
+        self.write_meta();
+    }
     pub fn rerank(&mut self, rank: u64) {
         todo!();
     }
@@ -242,8 +250,12 @@ impl Node {
     pub fn write(&mut self) {
         todo!();
     }
+    pub fn metadata_path(&self) ->PathBuf {
+        self.directory.join(&self.id).join("meta.toml")
+    }
+
     pub fn write_meta(&self) {
-        let metadata = self.directory.join(&self.id).join("meta.toml");
+        let metadata = self.metadata_path();
         let meta_toml = NodeMeta::from(self).to_toml();
         let display = metadata.display();
         let mut file = OpenOptions::new()

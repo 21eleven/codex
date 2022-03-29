@@ -94,14 +94,8 @@ impl fmt::Debug for NodeFilesMissingError {
 
 impl error::Error for NodeFilesMissingError {}
 
+/// Used to find the next id for root nodes
 pub fn next_sibling_id(key: &PathBuf) -> u64 {
-    // let path = PathBuf::from(key);
-    // // could be next root dir id
-    // let search_dir = match path.parent() {
-    //     Some(parent) => PathBuf::from("./").join(parent),
-    //     None => PathBuf::from("./"),
-    // };
-    // // TODO: check search_dir exists?
     let metas = WalkDir::new(key)
         .sort_by_file_name()
         .contents_first(true)
@@ -424,5 +418,9 @@ impl Tree {
                 }))
             }
         }
+    }
+    pub fn link(&mut self, a: &String, b: &String) {
+        self.nodes.get_mut(a).unwrap().link(b.clone());
+        self.nodes.get_mut(b).unwrap().backlink(a.clone());
     }
 }
