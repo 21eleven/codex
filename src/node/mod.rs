@@ -108,6 +108,20 @@ impl fmt::Display for Node {
         Ok(())
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct NodeLink {
+    pub id:NodeKey,
+    pub line: u64,
+    pub char: u64,
+}
+impl fmt::Display for NodeLink {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}]({}|{})", self.id, self.line, self.char)?;
+        Ok(())
+    }
+}
+
 pub fn prepare_path_name(node_name: &str) -> String {
     node_name
         // .to_ascii_lowercase()
