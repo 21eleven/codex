@@ -1,5 +1,5 @@
 use crate::git::{commit_paths, stage_all};
-use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeMeta};
+use crate::node::{power_of_ten, prepare_path_name, Node, NodeLink, NodeKey, NodeMeta};
 use chrono::Local;
 use git2::Repository;
 use log::*;
@@ -330,14 +330,14 @@ impl Tree {
                             rename(old_path, new_path).unwrap();
                             // link is another node
                             // that this node points to in its content
-                            for link in &node_clone.links {
-                                let linked = self.nodes.get_mut(link).unwrap();
+                            for (id, link) in &node_clone.links {
+                                let linked = self.nodes.get_mut(&link.node).unwrap();
                                 linked.rename_backlink(sibid, &newid);
                             }
                             // a backlink is a node that has a link
                             // in its content that points to this node
-                            for backlink in &node_clone.backlinks {
-                                let backlinked = self.nodes.get_mut(backlink).unwrap();
+                            for (id, backlink) in &node_clone.backlinks {
+                                let backlinked = self.nodes.get_mut(&backlink.node).unwrap();
                                 backlinked.rename_link(sibid, &newid);
                             }
                             // all children need to be renamed since their
@@ -356,12 +356,12 @@ impl Tree {
                                 // calc new name
                                 let newid = format!("{}/{}", parent, node_name,);
                                 // inform links
-                                for link in &node.links {
-                                    let linked = map.get_mut(link).unwrap();
+                                for (id, link) in &node.links {
+                                    let linked = map.get_mut(&link.node).unwrap();
                                     linked.rename_backlink(node_ref, &newid);
                                 }
-                                for backlink in &node.backlinks {
-                                    let backlinked = map.get_mut(backlink).unwrap();
+                                for (id, backlink) in &node.backlinks {
+                                    let backlinked = map.get_mut(&backlink.node).unwrap();
                                     backlinked.rename_link(node_ref, &newid);
                                 }
                                 node.parent = Some(parent.to_string());
@@ -419,8 +419,10 @@ impl Tree {
             }
         }
     }
-    pub fn link(&mut self, a: &String, b: &String) {
-        self.nodes.get_mut(a).unwrap().link(b.clone());
-        self.nodes.get_mut(b).unwrap().backlink(a.clone());
+    pub fn link(&mut self, a: &String, link_line: u64, link_char: u64, b: &String, backlink_line: u64, backlink_char: u64) -> i64{
+        let (id, link, backlink) = NodeLink::pair(a.clone(), link_line, link_char, b.clone(), backlink_line, backlink_char);
+        self.nodes.get_mut(a).unwrap().link(id, link);
+        self.nodes.get_mut(b).unwrap().backlink(id, backlink);
+        id
     }
 }

@@ -46,13 +46,15 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     let c = tree.create_node(Some("2-desk"), Some("c")).unwrap();
     assert_eq!(number_of_nodes(dir.path()), 5);
     assert!(tree.nodes.contains_key("2-desk/1-a/1-b"));
-    tree.link(&b, &c);
+    let link_id = tree.link(&b, 0, 0, &c, 0, 0);
     let bnode = tree.nodes.get(&b).unwrap();
-    assert!(bnode.links.contains(&c));
+    assert!(bnode.links.contains_key(&link_id));
+    let link = bnode.links.get(&link_id).unwrap().clone();
     let cnode = tree.nodes.get(&c).unwrap();
-    assert!(cnode.backlinks.contains(&b));
-    assert!(meta_has_link(bnode.metadata_path(), &c));
-    assert!(meta_has_backlink(cnode.metadata_path(), &b));
+    assert!(cnode.backlinks.contains_key(&link_id));
+    let backlink = cnode.backlinks.get(&link_id).unwrap().clone();
+    assert!(meta_has_link(bnode.metadata_path(), link_id, &link));
+    assert!(meta_has_backlink(cnode.metadata_path(), link_id, &backlink));
 }
 // fn link_nodes(tree_ab: TreeAB) {
 //     // tree_ab is a fixture struct and that hold as tree and the ids for two nodes within it

@@ -4,7 +4,7 @@ use chrono::{DateTime, Local};
 use log::*;
 use nvim_rs::Value;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
@@ -13,6 +13,7 @@ use crate::git::commit_paths;
 use date_serde::codex_date_format;
 use git2::Repository;
 use std::fmt;
+use serde_derive;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -80,8 +81,8 @@ pub struct Node {
     pub display_name: String,
     pub parent: Option<NodeKey>,
     pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
-    pub links: HashSet<NodeKey>,
-    pub backlinks: HashSet<NodeKey>,
+    pub links: HashMap<i64, NodeLink>,
+    pub backlinks: HashMap<i64, NodeLink>,
     pub tags: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
@@ -109,17 +110,35 @@ impl fmt::Display for Node {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde_derive::Deserialize, serde_derive::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeLink {
-    pub id:NodeKey,
+    pub node:NodeKey,
     pub line: u64,
     pub char: u64,
 }
 impl fmt::Display for NodeLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}]({}|{})", self.id, self.line, self.char)?;
+        write!(f, "[{}]({}|{})", self.node, self.line, self.char)?;
         Ok(())
     }
+}
+impl NodeLink {
+    pub fn pair(link: String, link_line: u64, link_char: u64, backlink: String, backlink_line: u64, backlink_char: u64) -> (i64, Self, Self) {
+        let id = chrono::Local::now().timestamp_millis();
+        (id, NodeLink { node: link, line: link_line, char: link_char }, NodeLink { node: backlink, line: backlink_line, char: backlink_char })
+
+    }
+    pub fn to_toml(&self, id: i64) -> String {
+        format!("{} {} {} {}", id, self.node , self.line, self.char)
+    }
+    pub fn from_toml(toml: String) ->(i64, NodeLink) {
+        let (id, link) = toml.split_once(" ").unwrap();
+        let (node, link) = link.split_once(" ").unwrap();
+        let (line, char) = link.split_once(" ").unwrap();
+        (id.parse::<i64>().unwrap(), NodeLink { node:node.to_string(), line:line.parse::<u64>().unwrap(), char:char.parse::<u64>().unwrap()})
+
+    }
+
 }
 
 pub fn prepare_path_name(node_name: &str) -> String {
@@ -155,8 +174,8 @@ impl Node {
             name,
             parent: parent_option,
             children: vec![],
-            links: HashSet::new(),
-            backlinks: HashSet::new(),
+            links: HashMap::new(),
+            backlinks: HashMap::new(), 
             tags: HashSet::new(),
             created: now,
             updated: now,
@@ -204,29 +223,30 @@ impl Node {
         children: Vec<NodeKey>,
         directory: &str,
     ) -> Node {
-        let (name, tags, links, backlinks, created, updated, updates) =
-            NodeMeta::from_toml(toml_path).data();
+        // let (name, tags, links, backlinks, created, updated, updates) =
+        //     NodeMeta::from_toml(toml_path).data();
+        let metadata = NodeMeta::from_toml(toml_path);
         Node {
             display_name: format_display_name(&id),
             id,
-            name,
+            name: metadata.name,
             parent,
             children,
-            links: links.into_iter().collect(),
-            backlinks: backlinks.into_iter().collect(),
-            tags: tags.into_iter().collect(),
-            created,
-            updated,
-            updates,
+            links: metadata.links.into_iter().map(|s| NodeLink::from_toml(s)).collect(),
+            backlinks: metadata.backlinks.into_iter().map(|s| NodeLink::from_toml(s)).collect(),
+            tags: metadata.tags.into_iter().collect(),
+            created: metadata.created,
+            updated: metadata.updated,
+            updates: metadata.updates,
             directory: PathBuf::from(directory)
         }
     }
-    pub fn link(&mut self, link: String) {
-        self.links.insert(link);
+    pub fn link(&mut self, id: i64, link: NodeLink) {
+        self.links.insert(id, link);
         self.write_meta();
     }
-    pub fn backlink(&mut self, backlink: String) {
-        self.backlinks.insert(backlink);
+    pub fn backlink(&mut self, id: i64, backlink: NodeLink) {
+        self.backlinks.insert(id, backlink);
         self.write_meta();
     }
     pub fn rerank(&mut self, rank: u64) {
@@ -248,14 +268,16 @@ impl Node {
         // break
         // }
         // }
-        self.links.remove(old_name);
-        self.links.insert(new_name.to_string());
-        self.write_meta();
+        // self.links.remove(old_name);
+        // self.links.insert(new_name.to_string());
+        // self.write_meta();
+        todo!()
     }
     pub fn rename_backlink(&mut self, old_name: &str, new_name: &str) {
-        self.backlinks.remove(old_name);
-        self.backlinks.insert(new_name.to_string());
-        self.write_meta();
+        // self.backlinks.remove(old_name);
+        // self.backlinks.insert(new_name.to_string());
+        // self.write_meta();
+        todo!()
     }
     pub fn update(&mut self) {
         self.tick_update();
@@ -334,7 +356,7 @@ impl NodeMeta {
             name,
             tags: vec![],
             links: vec![],
-            backlinks: vec![],
+            backlinks: vec![], 
             created: now,
             updated: now,
             updates: 1,
@@ -343,15 +365,11 @@ impl NodeMeta {
     pub fn from(node: &Node) -> NodeMeta {
         let mut tags: Vec<String> = node.tags.clone().into_iter().collect();
         tags.sort_unstable();
-        let mut links: Vec<String> = node.links.clone().into_iter().collect();
-        links.sort_unstable();
-        let mut backlinks: Vec<String> = node.backlinks.clone().into_iter().collect();
-        backlinks.sort_unstable();
         NodeMeta {
             name: node.name.clone(),
             tags,
-            links,
-            backlinks,
+            links: node.links.iter().map(|(k, link)| link.to_toml(*k)).collect(),
+            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(*k)).collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,
@@ -360,27 +378,6 @@ impl NodeMeta {
     pub fn from_toml(toml_path: &Path) -> NodeMeta {
         let toml_string = read_to_string(toml_path).unwrap();
         toml::from_str(&toml_string).unwrap()
-    }
-    pub fn data(
-        self,
-    ) -> (
-        String,
-        Vec<String>,
-        Vec<String>,
-        Vec<String>,
-        DateTime<Local>,
-        DateTime<Local>,
-        u64,
-    ) {
-        (
-            self.name,
-            self.tags,
-            self.links,
-            self.backlinks,
-            self.created,
-            self.updated,
-            self.updates,
-        )
     }
     pub fn to_toml(&self) -> String {
         toml::to_string_pretty(self).unwrap()

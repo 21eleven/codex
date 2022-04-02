@@ -1,6 +1,6 @@
 use walkdir::WalkDir;
 use std::path::{Path, PathBuf};
-use codex::node::NodeMeta;
+use codex::node::{NodeMeta, NodeLink};
 
 pub fn number_of_nodes<P: AsRef<Path>>(path: P) ->usize {
     WalkDir::new(path)
@@ -27,11 +27,11 @@ pub fn nodekeys_in_dir<P: AsRef<Path>>(path: P) ->Vec<String> {
         .collect()
 }
 
-pub fn meta_has_link<P: AsRef<Path>>(path: P, link: &String) ->bool {
+pub fn meta_has_link<P: AsRef<Path>>(path: P, id: i64, link: &NodeLink) ->bool {
     let meta = NodeMeta::from_toml(&path.as_ref());
-    meta.links.contains(link)
+    meta.links.contains(&link.to_toml(id))
 }
-pub fn meta_has_backlink<P: AsRef<Path>>(path: P, backlink: &String) ->bool {
+pub fn meta_has_backlink<P: AsRef<Path>>(path: P, id: i64, backlink: &NodeLink) ->bool {
     let meta = NodeMeta::from_toml(&path.as_ref());
-    meta.backlinks.contains(backlink)
+    meta.backlinks.contains(&backlink.to_toml(id))
 }
