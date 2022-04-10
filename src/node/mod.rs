@@ -113,6 +113,7 @@ impl fmt::Display for Node {
 #[derive(Debug, Clone, serde_derive::Deserialize, serde_derive::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeLink {
     pub node:NodeKey,
+    pub timestamp: i64,
     pub line: u64,
     pub char: u64,
 }
@@ -122,21 +123,32 @@ impl fmt::Display for NodeLink {
         Ok(())
     }
 }
+
 impl NodeLink {
-    pub fn pair(link: String, link_line: u64, link_char: u64, backlink: String, backlink_line: u64, backlink_char: u64) -> (i64, Self, Self) {
-        let id = chrono::Local::now().timestamp_millis();
-        (id, NodeLink { node: link, line: link_line, char: link_char }, NodeLink { node: backlink, line: backlink_line, char: backlink_char })
+    pub fn pair(link: String, link_line: u64, link_char: u64, backlink: String, backlink_line: u64, backlink_char: u64) -> (Self, Self) {
+        let timestamp = chrono::Utc::now().timestamp();
+        (NodeLink { node: link, timestamp, line: link_line, char: link_char }, NodeLink { node: backlink, timestamp, line: backlink_line, char: backlink_char })
 
     }
-    pub fn to_toml(&self, id: i64) -> String {
-        format!("{} {} {} {}", id, self.node , self.line, self.char)
+    pub fn to_toml(&self, id: String) -> String {
+        // there should be some kind of string escaping here... 
+        // to check that the link text doesn't have `|,|` in it
+        format!("{}|,|{}|,|{}|,|{}|,|{}", id, self.timestamp, self.node , self.line, self.char)
     }
-    pub fn from_toml(toml: String) ->(i64, NodeLink) {
-        let (id, link) = toml.split_once(" ").unwrap();
-        let (node, link) = link.split_once(" ").unwrap();
-        let (line, char) = link.split_once(" ").unwrap();
-        (id.parse::<i64>().unwrap(), NodeLink { node:node.to_string(), line:line.parse::<u64>().unwrap(), char:char.parse::<u64>().unwrap()})
+    pub fn from_toml(toml: String) ->(String, NodeLink) {
+        let (id, link) = toml.split_once("|,|").unwrap();
+        let (timestamp, link) = link.split_once("|,|").unwrap();
+        let (node, link) = link.split_once("|,|").unwrap();
+        let (line, char) = link.split_once("|,|").unwrap();
+        (id.to_string(), NodeLink { node:node.to_string(), timestamp:timestamp.parse::<i64>().unwrap(), line:line.parse::<u64>().unwrap(), char:char.parse::<u64>().unwrap()})
 
+    }
+    pub fn backlink_id_to_string(id: (String, i64)) ->String {
+        format!("{}]|[{}", id.0, id.1)
+    }
+    pub fn backlink_id_from_string(id: String) ->(String, i64) {
+        let (id, timestamp) = id.split_once("]|[").unwrap();
+        (id.to_string(),timestamp.parse::<i64>().unwrap())
     }
 
 }
