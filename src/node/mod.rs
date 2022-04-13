@@ -81,8 +81,8 @@ pub struct Node {
     pub display_name: String,
     pub parent: Option<NodeKey>,
     pub children: Vec<NodeKey>, // parent has a point to it's children shared/sibling/family vec
-    pub links: HashMap<i64, NodeLink>,
-    pub backlinks: HashMap<i64, NodeLink>,
+    pub links: HashMap<String, NodeLink>,
+    pub backlinks: HashMap<(String, i64), NodeLink>,
     pub tags: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
@@ -110,9 +110,9 @@ impl fmt::Display for Node {
     }
 }
 
-#[derive(Debug, Clone, serde_derive::Deserialize, serde_derive::Serialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeLink {
-    pub node:NodeKey,
+    pub node: NodeKey,
     pub timestamp: i64,
     pub line: u64,
     pub char: u64,
@@ -143,10 +143,10 @@ impl NodeLink {
         (id.to_string(), NodeLink { node:node.to_string(), timestamp:timestamp.parse::<i64>().unwrap(), line:line.parse::<u64>().unwrap(), char:char.parse::<u64>().unwrap()})
 
     }
-    pub fn backlink_id_to_string(id: (String, i64)) ->String {
+    pub fn serialize_backlink_id(id: (String, i64)) ->String {
         format!("{}]|[{}", id.0, id.1)
     }
-    pub fn backlink_id_from_string(id: String) ->(String, i64) {
+    pub fn deserialize_backlink_id(id: String) ->(String, i64) {
         let (id, timestamp) = id.split_once("]|[").unwrap();
         (id.to_string(),timestamp.parse::<i64>().unwrap())
     }
@@ -245,7 +245,7 @@ impl Node {
             parent,
             children,
             links: metadata.links.into_iter().map(|s| NodeLink::from_toml(s)).collect(),
-            backlinks: metadata.backlinks.into_iter().map(|s| NodeLink::from_toml(s)).collect(),
+            backlinks: metadata.backlinks.into_iter().map(|s| NodeLink::from_toml(s)).map(|(id, link)| (NodeLink::deserialize_backlink_id(id), link)).collect(),
             tags: metadata.tags.into_iter().collect(),
             created: metadata.created,
             updated: metadata.updated,
@@ -253,11 +253,11 @@ impl Node {
             directory: PathBuf::from(directory)
         }
     }
-    pub fn link(&mut self, id: i64, link: NodeLink) {
+    pub fn link(&mut self, id: String, link: NodeLink) {
         self.links.insert(id, link);
         self.write_meta();
     }
-    pub fn backlink(&mut self, id: i64, backlink: NodeLink) {
+    pub fn backlink(&mut self, id: (String, i64), backlink: NodeLink) {
         self.backlinks.insert(id, backlink);
         self.write_meta();
     }
@@ -381,7 +381,7 @@ impl NodeMeta {
             name: node.name.clone(),
             tags,
             links: node.links.iter().map(|(k, link)| link.to_toml(*k)).collect(),
-            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(*k)).collect(),
+            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(*k))).collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,

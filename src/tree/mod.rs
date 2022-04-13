@@ -419,10 +419,9 @@ impl Tree {
             }
         }
     }
-    pub fn link(&mut self, a: &String, link_line: u64, link_char: u64, b: &String, backlink_line: u64, backlink_char: u64) -> i64{
-        let (id, link, backlink) = NodeLink::pair(a.clone(), link_line, link_char, b.clone(), backlink_line, backlink_char);
-        self.nodes.get_mut(a).unwrap().link(id, link);
-        self.nodes.get_mut(b).unwrap().backlink(id, backlink);
-        id
+    pub fn link(&mut self, link_id: String, a: &String, link_line: u64, link_char: u64, b: &String, backlink_line: u64, backlink_char: u64) {
+        let (link, backlink) = NodeLink::pair(a.clone(), link_line, link_char, b.clone(), backlink_line, backlink_char);
+        self.nodes.get_mut(a).unwrap().link(link_id.clone(), link);
+        self.nodes.get_mut(b).unwrap().backlink((link_id, backlink.timestamp), backlink);
     }
 }
