@@ -380,8 +380,8 @@ impl NodeMeta {
         NodeMeta {
             name: node.name.clone(),
             tags,
-            links: node.links.iter().map(|(k, link)| link.to_toml(*k)).collect(),
-            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(*k))).collect(),
+            links: node.links.iter().map(|(k, link)| link.to_toml(k.clone())).collect(),
+            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(k.clone()))).collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,
