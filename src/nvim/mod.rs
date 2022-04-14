@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use log::*;
 use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::tree;
 use crate::tree::next_sibling_id;

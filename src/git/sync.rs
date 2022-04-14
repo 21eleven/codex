@@ -185,11 +185,10 @@ fn fast_forward(
     lb.set_target(rc.id(), &msg)?;
     repo.set_head(&name)?;
     repo.checkout_head(Some(
-        &mut git2::build::CheckoutBuilder::default()
-            // For some reason the force is required to make the working directory actually get updated
-            // I suspect we should be adding some logic to handle dirty working directory states
-            // but this is just an example so maybe not.
-            // .force(),
+        &mut git2::build::CheckoutBuilder::default(), // For some reason the force is required to make the working directory actually get updated
+                                                      // I suspect we should be adding some logic to handle dirty working directory states
+                                                      // but this is just an example so maybe not.
+                                                      // .force(),
     ))?;
     Ok(())
 }

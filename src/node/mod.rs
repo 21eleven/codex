@@ -4,16 +4,16 @@ use chrono::{DateTime, Local};
 use log::*;
 use nvim_rs::Value;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashSet,HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 mod date_serde;
 use crate::git::commit_paths;
 use date_serde::codex_date_format;
 use git2::Repository;
-use std::fmt;
 use serde_derive;
+use std::fmt;
 
 // type Datetime = DateTime<Local>;
 // struct HierarchicalIdentifier {
@@ -125,32 +125,60 @@ impl fmt::Display for NodeLink {
 }
 
 impl NodeLink {
-    pub fn pair(link: String, link_line: u64, link_char: u64, backlink: String, backlink_line: u64, backlink_char: u64) -> (Self, Self) {
+    pub fn pair(
+        link: String,
+        link_line: u64,
+        link_char: u64,
+        backlink: String,
+        backlink_line: u64,
+        backlink_char: u64,
+    ) -> (Self, Self) {
         let timestamp = chrono::Utc::now().timestamp();
-        (NodeLink { node: link, timestamp, line: link_line, char: link_char }, NodeLink { node: backlink, timestamp, line: backlink_line, char: backlink_char })
-
+        (
+            NodeLink {
+                node: link,
+                timestamp,
+                line: link_line,
+                char: link_char,
+            },
+            NodeLink {
+                node: backlink,
+                timestamp,
+                line: backlink_line,
+                char: backlink_char,
+            },
+        )
     }
     pub fn to_toml(&self, id: String) -> String {
-        // there should be some kind of string escaping here... 
+        // there should be some kind of string escaping here...
         // to check that the link text doesn't have `|,|` in it
-        format!("{}|,|{}|,|{}|,|{}|,|{}", id, self.timestamp, self.node , self.line, self.char)
+        format!(
+            "{}|,|{}|,|{}|,|{}|,|{}",
+            id, self.timestamp, self.node, self.line, self.char
+        )
     }
-    pub fn from_toml(toml: String) ->(String, NodeLink) {
+    pub fn from_toml(toml: String) -> (String, NodeLink) {
         let (id, link) = toml.split_once("|,|").unwrap();
         let (timestamp, link) = link.split_once("|,|").unwrap();
         let (node, link) = link.split_once("|,|").unwrap();
         let (line, char) = link.split_once("|,|").unwrap();
-        (id.to_string(), NodeLink { node:node.to_string(), timestamp:timestamp.parse::<i64>().unwrap(), line:line.parse::<u64>().unwrap(), char:char.parse::<u64>().unwrap()})
-
+        (
+            id.to_string(),
+            NodeLink {
+                node: node.to_string(),
+                timestamp: timestamp.parse::<i64>().unwrap(),
+                line: line.parse::<u64>().unwrap(),
+                char: char.parse::<u64>().unwrap(),
+            },
+        )
     }
-    pub fn serialize_backlink_id(id: (String, i64)) ->String {
+    pub fn serialize_backlink_id(id: (String, i64)) -> String {
         format!("{}]|[{}", id.0, id.1)
     }
-    pub fn deserialize_backlink_id(id: String) ->(String, i64) {
+    pub fn deserialize_backlink_id(id: String) -> (String, i64) {
         let (id, timestamp) = id.split_once("]|[").unwrap();
-        (id.to_string(),timestamp.parse::<i64>().unwrap())
+        (id.to_string(), timestamp.parse::<i64>().unwrap())
     }
-
 }
 
 pub fn prepare_path_name(node_name: &str) -> String {
@@ -187,7 +215,7 @@ impl Node {
             parent: parent_option,
             children: vec![],
             links: HashMap::new(),
-            backlinks: HashMap::new(), 
+            backlinks: HashMap::new(),
             tags: HashSet::new(),
             created: now,
             updated: now,
@@ -244,13 +272,22 @@ impl Node {
             name: metadata.name,
             parent,
             children,
-            links: metadata.links.into_iter().map(|s| NodeLink::from_toml(s)).collect(),
-            backlinks: metadata.backlinks.into_iter().map(|s| NodeLink::from_toml(s)).map(|(id, link)| (NodeLink::deserialize_backlink_id(id), link)).collect(),
+            links: metadata
+                .links
+                .into_iter()
+                .map(|s| NodeLink::from_toml(s))
+                .collect(),
+            backlinks: metadata
+                .backlinks
+                .into_iter()
+                .map(|s| NodeLink::from_toml(s))
+                .map(|(id, link)| (NodeLink::deserialize_backlink_id(id), link))
+                .collect(),
             tags: metadata.tags.into_iter().collect(),
             created: metadata.created,
             updated: metadata.updated,
             updates: metadata.updates,
-            directory: PathBuf::from(directory)
+            directory: PathBuf::from(directory),
         }
     }
     pub fn link(&mut self, id: String, link: NodeLink) {
@@ -298,7 +335,7 @@ impl Node {
     pub fn write(&mut self) {
         todo!();
     }
-    pub fn metadata_path(&self) ->PathBuf {
+    pub fn metadata_path(&self) -> PathBuf {
         self.directory.join(&self.id).join("meta.toml")
     }
 
@@ -368,7 +405,7 @@ impl NodeMeta {
             name,
             tags: vec![],
             links: vec![],
-            backlinks: vec![], 
+            backlinks: vec![],
             created: now,
             updated: now,
             updates: 1,
@@ -380,8 +417,16 @@ impl NodeMeta {
         NodeMeta {
             name: node.name.clone(),
             tags,
-            links: node.links.iter().map(|(k, link)| link.to_toml(k.clone())).collect(),
-            backlinks: node.backlinks.iter().map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(k.clone()))).collect(),
+            links: node
+                .links
+                .iter()
+                .map(|(k, link)| link.to_toml(k.clone()))
+                .collect(),
+            backlinks: node
+                .backlinks
+                .iter()
+                .map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(k.clone())))
+                .collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,

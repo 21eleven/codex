@@ -1,5 +1,5 @@
 use crate::git::{commit_paths, stage_all};
-use crate::node::{power_of_ten, prepare_path_name, Node, NodeLink, NodeKey, NodeMeta};
+use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeLink, NodeMeta};
 use chrono::Local;
 use git2::Repository;
 use log::*;
@@ -195,7 +195,13 @@ impl Tree {
                 Some(namepath) => {
                     // debug!("{:?}", &namepath);
                     let meta_path = base.join(&namepath).join("meta.toml");
-                    let node = Node::from_tree(namepath, &meta_path, parent, children, base.to_str().unwrap());
+                    let node = Node::from_tree(
+                        namepath,
+                        &meta_path,
+                        parent,
+                        children,
+                        base.to_str().unwrap(),
+                    );
                     if journal.is_none() && node.tags.contains("journal") {
                         *journal = Some(node.id.clone());
                     }
@@ -225,7 +231,7 @@ impl Tree {
             nodes: node_map,
             journal: journal.unwrap(),
             desk: desk.unwrap(),
-            dir: PathBuf::from(root)
+            dir: PathBuf::from(root),
         })
     }
     pub fn today_node(&mut self) -> NodeKey {
@@ -279,7 +285,9 @@ impl Tree {
                 debug!("parent {:?} and child {:?}", parent, child);
                 dbg!(&parent, &child);
                 let child = match self.nodes.get_mut(&parent) {
-                    Some(parent) => Some(parent.create_child(child.to_string(), self.dir.to_str().unwrap())),
+                    Some(parent) => {
+                        Some(parent.create_child(child.to_string(), self.dir.to_str().unwrap()))
+                    }
                     None => {
                         error!("no node in tree named: {:?}", parent);
                         None
@@ -419,9 +427,28 @@ impl Tree {
             }
         }
     }
-    pub fn link(&mut self, link_id: String, a: &String, link_line: u64, link_char: u64, b: &String, backlink_line: u64, backlink_char: u64) {
-        let (link, backlink) = NodeLink::pair(a.clone(), link_line, link_char, b.clone(), backlink_line, backlink_char);
+    pub fn link(
+        &mut self,
+        link_id: String,
+        a: &String,
+        link_line: u64,
+        link_char: u64,
+        b: &String,
+        backlink_line: u64,
+        backlink_char: u64,
+    ) {
+        let (link, backlink) = NodeLink::pair(
+            a.clone(),
+            link_line,
+            link_char,
+            b.clone(),
+            backlink_line,
+            backlink_char,
+        );
         self.nodes.get_mut(a).unwrap().link(link_id.clone(), link);
-        self.nodes.get_mut(b).unwrap().backlink((link_id, backlink.timestamp), backlink);
+        self.nodes
+            .get_mut(b)
+            .unwrap()
+            .backlink((link_id, backlink.timestamp), backlink);
     }
 }

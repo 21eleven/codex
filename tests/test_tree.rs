@@ -4,7 +4,7 @@
     unused_variables,
     unused_macros,
     unused_assignments,
-    unused_mut,
+    unused_mut
 )]
 use codex::node::init_codex_repo;
 use codex::tree::Tree;
@@ -16,16 +16,16 @@ use fixtures::*;
 mod utils;
 use utils::*;
 
-
-
-
 #[rstest]
 fn blank_slate(tempdir: TempDir) {
     assert_eq!(number_of_nodes(tempdir.path()), 0);
     dbg!(&tempdir);
     init_codex_repo(Some(tempdir.path().to_str().unwrap()));
     assert_eq!(number_of_nodes(tempdir.path()), 2);
-    assert_eq!(nodekeys_in_dir(tempdir.path()), vec!["1-journal".to_string(), "2-desk".to_string()]);
+    assert_eq!(
+        nodekeys_in_dir(tempdir.path()),
+        vec!["1-journal".to_string(), "2-desk".to_string()]
+    );
 }
 
 #[rstest]
@@ -34,7 +34,6 @@ fn build_tree(dir_and_tree: (TempDir, Tree)) {
     assert_eq!(number_of_nodes(dir.path()), 2);
     assert_eq!(tree.nodes.keys().count(), 2);
 }
-
 
 #[rstest]
 fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
@@ -52,8 +51,14 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     assert!(bnode.links.contains_key(&link_id));
     let link = bnode.links.get(&link_id).unwrap().clone();
     let cnode = tree.nodes.get(&c).unwrap();
-    assert!(cnode.backlinks.contains_key(&(link_id.clone(), link.timestamp)));
-    let backlink = cnode.backlinks.get(&(link_id.clone(), link.timestamp)).unwrap().clone();
+    assert!(cnode
+        .backlinks
+        .contains_key(&(link_id.clone(), link.timestamp)));
+    let backlink = cnode
+        .backlinks
+        .get(&(link_id.clone(), link.timestamp))
+        .unwrap()
+        .clone();
     assert!(meta_has_link(bnode.metadata_path(), link_id.clone(), &link));
     assert!(meta_has_backlink(cnode.metadata_path(), link_id, &backlink));
 }

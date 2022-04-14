@@ -1,10 +1,10 @@
 use git2::Repository;
-use std::path::Path;
 use log::*;
 use nvim_rs::create::tokio as create;
 use std::default::Default;
 use std::env;
 use std::error::Error;
+use std::path::Path;
 use std::sync::Arc;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
 use std::sync::Mutex;
@@ -52,8 +52,7 @@ async fn main() {
             }
         }
     };
-    let tree = Arc::new(Mutex::new(match tree::Tree::build(
-                pwd.to_str().unwrap()) {
+    let tree = Arc::new(Mutex::new(match tree::Tree::build(pwd.to_str().unwrap()) {
         Ok(tree) => {
             debug!("tree gud!");
             tree
