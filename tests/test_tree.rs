@@ -6,7 +6,7 @@
     unused_assignments,
     unused_mut
 )]
-use codex::node::init_codex_repo;
+use codex::node::{init_codex_repo, NodeLink};
 use codex::tree::Tree;
 
 use rstest::rstest;
@@ -59,6 +59,19 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
         .get(&(link_id.clone(), link.timestamp))
         .unwrap()
         .clone();
-    assert!(meta_has_link(bnode.metadata_path(), link_id.clone(), &link));
-    assert!(meta_has_backlink(cnode.metadata_path(), link_id, &backlink));
+    assert!(meta_has_link(bnode.metadata_path(), &link_id, &link));
+    assert!(meta_has_backlink(
+        cnode.metadata_path(),
+        &link_id,
+        &backlink
+    ));
+    let cnode_meta_toml = std::fs::read_to_string(cnode.metadata_path())
+        .unwrap()
+        .to_string();
+    assert!(
+        cnode_meta_toml.contains(&backlink.to_toml(&NodeLink::serialize_backlink_id(
+            &link_id,
+            backlink.timestamp
+        )))
+    );
 }

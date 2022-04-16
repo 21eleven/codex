@@ -145,7 +145,7 @@ impl Node {
                 .backlinks
                 .into_iter()
                 .map(|s| NodeLink::from_toml(s))
-                .map(|(id, link)| (NodeLink::deserialize_backlink_id(id), link))
+                .map(|(id, link)| (NodeLink::deserialize_backlink_id(&id), link))
                 .collect(),
             tags: metadata.tags.into_iter().collect(),
             internal: metadata.internal.into_iter().collect(),
@@ -307,7 +307,7 @@ impl NodeLink {
             },
         )
     }
-    pub fn to_toml(&self, id: String) -> String {
+    pub fn to_toml(&self, id: &String) -> String {
         // there should be some kind of string escaping here...
         // to check that the link text doesn't have `|,|` in it
         format!(
@@ -330,10 +330,10 @@ impl NodeLink {
             },
         )
     }
-    pub fn serialize_backlink_id(id: (String, i64)) -> String {
-        format!("{}+|+{}", id.0, id.1)
+    pub fn serialize_backlink_id(text: &String, timestamp: i64) -> String {
+        format!("{text}+|+{timestamp}")
     }
-    pub fn deserialize_backlink_id(id: String) -> (String, i64) {
+    pub fn deserialize_backlink_id(id: &String) -> (String, i64) {
         let (id, timestamp) = id.split_once("+|+").unwrap();
         (id.to_string(), timestamp.parse::<i64>().unwrap())
     }
@@ -378,17 +378,17 @@ impl NodeMeta {
             links: node
                 .links
                 .iter()
-                .map(|(k, link)| link.to_toml(k.clone()))
+                .map(|(k, link)| link.to_toml(&k))
                 .collect(),
             backlinks: node
                 .backlinks
                 .iter()
-                .map(|(k, link)| link.to_toml(NodeLink::serialize_backlink_id(k.clone())))
+                .map(|(k, link)| link.to_toml(&NodeLink::serialize_backlink_id(&k.0, k.1)))
                 .collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,
-            internal
+            internal,
         }
     }
     pub fn from_toml(toml_path: &Path) -> NodeMeta {
