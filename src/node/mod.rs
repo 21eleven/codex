@@ -331,10 +331,10 @@ impl NodeLink {
         )
     }
     pub fn serialize_backlink_id(id: (String, i64)) -> String {
-        format!("{}]|[{}", id.0, id.1)
+        format!("{}+|+{}", id.0, id.1)
     }
     pub fn deserialize_backlink_id(id: String) -> (String, i64) {
-        let (id, timestamp) = id.split_once("]|[").unwrap();
+        let (id, timestamp) = id.split_once("+|+").unwrap();
         (id.to_string(), timestamp.parse::<i64>().unwrap())
     }
 }
