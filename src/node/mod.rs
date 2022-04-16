@@ -9,53 +9,13 @@ use std::fs::{create_dir, read_to_string, File, OpenOptions};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 mod date_serde;
-use crate::git::commit_paths;
 use date_serde::codex_date_format;
+mod utils;
+use crate::git::commit_paths;
 use git2::Repository;
 use serde_derive;
 use std::fmt;
-
-// type Datetime = DateTime<Local>;
-// struct HierarchicalIdentifier {
-//     codex_path: String
-// }
-// pub enum Entry {
-//     Page,
-//     Todo,
-// }
-
-pub fn power_of_ten(mut n: u64) -> Option<u64> {
-    let mut pow = 1;
-    let mut r = 0;
-    loop {
-        if r > 0 || n == 0 {
-            return None;
-        } else if n == 10 {
-            return Some(pow);
-        } else {
-            pow += 1;
-            r = n % 10;
-            n /= 10;
-        }
-    }
-}
-
-#[test]
-fn test_power_of_ten() {
-    assert_eq!(power_of_ten(0), None);
-    assert_eq!(power_of_ten(9), None);
-    assert_eq!(power_of_ten(11), None);
-    assert_eq!(power_of_ten(10), Some(1));
-    assert_eq!(power_of_ten(100), Some(2));
-    assert_eq!(power_of_ten(100_000), Some(5));
-}
-
-fn format_display_name(name: &str) -> String {
-    name.split('/')
-        .map(|part| part.split_once('-').unwrap().1.replace("-", " "))
-        .collect::<Vec<String>>()
-        .join(" / ")
-}
+pub use utils::*;
 
 pub type NodeKey = String;
 
@@ -452,10 +412,4 @@ pub fn init_codex_repo(path: Option<&str>) -> Repository {
     desk.tag(String::from("desk"));
     desk.write_meta();
     repo
-}
-
-#[test]
-fn test_format_display_name() {
-    assert!(format_display_name("002-desk") == *"desk");
-    assert!(format_display_name("002-desk/1-cool-jazz") == *"desk / cool jazz");
 }
