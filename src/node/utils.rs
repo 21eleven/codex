@@ -21,6 +21,17 @@ pub fn format_display_name(name: &str) -> String {
         .join(" / ")
 }
 
+pub fn prepare_path_name(node_name: &str) -> String {
+    node_name
+        // .to_ascii_lowercase()
+        .chars()
+        .map(|c| match c {
+            ' ' => '-',
+            _ => c,
+        })
+        .collect()
+}
+
 #[test]
 fn test_power_of_ten() {
     assert_eq!(power_of_ten(0), None);

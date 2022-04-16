@@ -17,23 +17,6 @@ use serde_derive;
 use std::fmt;
 pub use utils::*;
 
-pub type NodeKey = String;
-
-impl Telescoped for NodeKey {
-    fn entry(&self) -> Value {
-        Value::Map(vec![
-            (
-                Value::String("id".into()),
-                Value::String(self.clone().into()),
-            ),
-            (
-                Value::String("display".into()),
-                Value::String(format_display_name(self).into()),
-            ),
-        ])
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Node {
     pub id: NodeKey,
@@ -49,6 +32,7 @@ pub struct Node {
     pub updates: u64,
     directory: PathBuf,
 }
+
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Node({}): {{", self.name)?;
@@ -68,88 +52,6 @@ impl fmt::Display for Node {
         writeln!(f, "}}")?;
         Ok(())
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NodeLink {
-    pub node: NodeKey,
-    pub timestamp: i64,
-    pub line: u64,
-    pub char: u64,
-}
-impl fmt::Display for NodeLink {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}]({}|{})", self.node, self.line, self.char)?;
-        Ok(())
-    }
-}
-
-impl NodeLink {
-    pub fn pair(
-        link: String,
-        link_line: u64,
-        link_char: u64,
-        backlink: String,
-        backlink_line: u64,
-        backlink_char: u64,
-    ) -> (Self, Self) {
-        let timestamp = chrono::Utc::now().timestamp();
-        (
-            NodeLink {
-                node: link,
-                timestamp,
-                line: link_line,
-                char: link_char,
-            },
-            NodeLink {
-                node: backlink,
-                timestamp,
-                line: backlink_line,
-                char: backlink_char,
-            },
-        )
-    }
-    pub fn to_toml(&self, id: String) -> String {
-        // there should be some kind of string escaping here...
-        // to check that the link text doesn't have `|,|` in it
-        format!(
-            "{}|,|{}|,|{}|,|{}|,|{}",
-            id, self.timestamp, self.node, self.line, self.char
-        )
-    }
-    pub fn from_toml(toml: String) -> (String, NodeLink) {
-        let (id, link) = toml.split_once("|,|").unwrap();
-        let (timestamp, link) = link.split_once("|,|").unwrap();
-        let (node, link) = link.split_once("|,|").unwrap();
-        let (line, char) = link.split_once("|,|").unwrap();
-        (
-            id.to_string(),
-            NodeLink {
-                node: node.to_string(),
-                timestamp: timestamp.parse::<i64>().unwrap(),
-                line: line.parse::<u64>().unwrap(),
-                char: char.parse::<u64>().unwrap(),
-            },
-        )
-    }
-    pub fn serialize_backlink_id(id: (String, i64)) -> String {
-        format!("{}]|[{}", id.0, id.1)
-    }
-    pub fn deserialize_backlink_id(id: String) -> (String, i64) {
-        let (id, timestamp) = id.split_once("]|[").unwrap();
-        (id.to_string(), timestamp.parse::<i64>().unwrap())
-    }
-}
-
-pub fn prepare_path_name(node_name: &str) -> String {
-    node_name
-        // .to_ascii_lowercase()
-        .chars()
-        .map(|c| match c {
-            ' ' => '-',
-            _ => c,
-        })
-        .collect()
 }
 
 impl Node {
@@ -342,6 +244,95 @@ impl Telescoped for Node {
                 Value::String(self.display_name.clone().into()),
             ),
         ])
+    }
+}
+
+pub type NodeKey = String;
+
+impl Telescoped for NodeKey {
+    fn entry(&self) -> Value {
+        Value::Map(vec![
+            (
+                Value::String("id".into()),
+                Value::String(self.clone().into()),
+            ),
+            (
+                Value::String("display".into()),
+                Value::String(format_display_name(self).into()),
+            ),
+        ])
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NodeLink {
+    pub node: NodeKey,
+    pub timestamp: i64,
+    pub line: u64,
+    pub char: u64,
+}
+
+impl fmt::Display for NodeLink {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}]({}|{})", self.node, self.line, self.char)?;
+        Ok(())
+    }
+}
+
+impl NodeLink {
+    pub fn pair(
+        link: String,
+        link_line: u64,
+        link_char: u64,
+        backlink: String,
+        backlink_line: u64,
+        backlink_char: u64,
+    ) -> (Self, Self) {
+        let timestamp = chrono::Utc::now().timestamp();
+        (
+            NodeLink {
+                node: link,
+                timestamp,
+                line: link_line,
+                char: link_char,
+            },
+            NodeLink {
+                node: backlink,
+                timestamp,
+                line: backlink_line,
+                char: backlink_char,
+            },
+        )
+    }
+    pub fn to_toml(&self, id: String) -> String {
+        // there should be some kind of string escaping here...
+        // to check that the link text doesn't have `|,|` in it
+        format!(
+            "{}|,|{}|,|{}|,|{}|,|{}",
+            id, self.timestamp, self.node, self.line, self.char
+        )
+    }
+    pub fn from_toml(toml: String) -> (String, NodeLink) {
+        let (id, link) = toml.split_once("|,|").unwrap();
+        let (timestamp, link) = link.split_once("|,|").unwrap();
+        let (node, link) = link.split_once("|,|").unwrap();
+        let (line, char) = link.split_once("|,|").unwrap();
+        (
+            id.to_string(),
+            NodeLink {
+                node: node.to_string(),
+                timestamp: timestamp.parse::<i64>().unwrap(),
+                line: line.parse::<u64>().unwrap(),
+                char: char.parse::<u64>().unwrap(),
+            },
+        )
+    }
+    pub fn serialize_backlink_id(id: (String, i64)) -> String {
+        format!("{}]|[{}", id.0, id.1)
+    }
+    pub fn deserialize_backlink_id(id: String) -> (String, i64) {
+        let (id, timestamp) = id.split_once("]|[").unwrap();
+        (id.to_string(), timestamp.parse::<i64>().unwrap())
     }
 }
 
