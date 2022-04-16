@@ -156,12 +156,12 @@ impl Node {
     }
     pub fn insert_link(&mut self, link: NodeLink) {
         self.links.insert(link.text.clone(), link);
-        self.write_meta();
+        self.tick_update_and_write_meta();
     }
     pub fn insert_backlink(&mut self, backlink: NodeLink) {
         self.backlinks
             .insert((backlink.text.clone(), backlink.timestamp), backlink);
-        self.write_meta();
+        self.tick_update_and_write_meta();
     }
     pub fn rerank(&mut self, rank: u64) {
         todo!();
@@ -193,13 +193,6 @@ impl Node {
         // self.write_meta();
         todo!()
     }
-    pub fn update(&mut self) {
-        self.tick_update();
-        self.write()
-    }
-    pub fn write(&mut self) {
-        todo!();
-    }
     pub fn metadata_path(&self) -> PathBuf {
         self.directory.join(&self.id).join("meta.toml")
     }
@@ -218,21 +211,24 @@ impl Node {
             Ok(_) => debug!("successfully wrote to {}", display),
         }
     }
-    pub fn tick_update(&mut self) {
+    pub fn tick_update_and_write_meta(&mut self) {
         let now = Local::now();
 
         if now.date() != self.updated.date() {
             self.updates += 1;
         }
         self.updated = now;
+        self.write_meta();
     }
     pub fn create_child(&mut self, name: String, path: &str) -> Node {
         let child = Node::create(name, Some(self), path);
         self.children.push(child.id.clone());
+        self.tick_update_and_write_meta();
         child
     }
     fn tag(&mut self, new_tag: String) {
         self.tags.insert(new_tag);
+        self.tick_update_and_write_meta();
     }
 }
 impl Telescoped for Node {
