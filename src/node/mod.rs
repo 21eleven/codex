@@ -139,13 +139,12 @@ impl Node {
             links: metadata
                 .links
                 .into_iter()
-                .map(|s| NodeLink::from_toml(s))
+                .map(|s| NodeLink::parse_link_w_key(s))
                 .collect(),
             backlinks: metadata
                 .backlinks
                 .into_iter()
-                .map(|s| NodeLink::from_toml(s))
-                .map(|(id, link)| (NodeLink::deserialize_backlink_id(&id), link))
+                .map(|s| NodeLink::parse_backlink_w_key(s))
                 .collect(),
             tags: metadata.tags.into_iter().collect(),
             internal: metadata.internal.into_iter().collect(),
@@ -155,12 +154,13 @@ impl Node {
             directory: PathBuf::from(directory),
         }
     }
-    pub fn link(&mut self, id: String, link: NodeLink) {
-        self.links.insert(id, link);
+    pub fn insert_link(&mut self, link: NodeLink) {
+        self.links.insert(link.text.clone(), link);
         self.write_meta();
     }
-    pub fn backlink(&mut self, id: (String, i64), backlink: NodeLink) {
-        self.backlinks.insert(id, backlink);
+    pub fn insert_backlink(&mut self, backlink: NodeLink) {
+        self.backlinks
+            .insert((backlink.text.clone(), backlink.timestamp), backlink);
         self.write_meta();
     }
     pub fn rerank(&mut self, rank: u64) {
@@ -267,75 +267,104 @@ impl Telescoped for NodeKey {
     }
 }
 
+// #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+// enum LinkType {
+//     Link(String),
+//     BackLink(String),
+// }
+// use LinkType::*;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeLink {
     pub node: NodeKey,
+    pub text: String,
     pub timestamp: i64,
     pub line: u64,
     pub char: u64,
+    pub is_name_linked: bool,
 }
 
 impl fmt::Display for NodeLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}]({}|{})", self.node, self.line, self.char)?;
+        write!(
+            f,
+            "[[ {}| -> [{}]({}|{}) ]]",
+            self.text, self.node, self.line, self.char
+        )?;
         Ok(())
     }
 }
 
 impl NodeLink {
     pub fn pair(
-        link: String,
-        link_line: u64,
-        link_char: u64,
-        backlink: String,
-        backlink_line: u64,
-        backlink_char: u64,
+        text: String,
+        from: String,
+        from_line: u64,
+        from_char: u64,
+        to: String,
+        to_line: u64,
+        to_char: u64,
     ) -> (Self, Self) {
         let timestamp = chrono::Utc::now().timestamp();
+        let is_name_linked = link_text_is_node_name(&text, &to);
         (
             NodeLink {
-                node: link,
+                node: to,
+                text: text.clone(),
                 timestamp,
-                line: link_line,
-                char: link_char,
+                line: to_line,
+                char: to_char,
+                is_name_linked,
             },
             NodeLink {
-                node: backlink,
+                node: from,
+                text,
                 timestamp,
-                line: backlink_line,
-                char: backlink_char,
+                line: from_line,
+                char: from_char,
+                is_name_linked,
             },
         )
     }
-    pub fn to_toml(&self, id: &String) -> String {
+    pub fn to_toml(&self) -> String {
         // there should be some kind of string escaping here...
         // to check that the link text doesn't have `|,|` in it
+
+        let link_varient = if self.is_name_linked {
+            "name_ref"
+        } else {
+            "text_ref"
+        };
         format!(
-            "{}|,|{}|,|{}|,|{}|,|{}",
-            id, self.timestamp, self.node, self.line, self.char
+            "{}|,|{}|,|{}|,|{}|,|{}|,|{link_varient}",
+            self.text, self.timestamp, self.node, self.line, self.char
         )
     }
-    pub fn from_toml(toml: String) -> (String, NodeLink) {
-        let (id, link) = toml.split_once("|,|").unwrap();
+    fn from_toml(toml: String) -> NodeLink {
+        let (text, link) = toml.split_once("|,|").unwrap();
         let (timestamp, link) = link.split_once("|,|").unwrap();
         let (node, link) = link.split_once("|,|").unwrap();
-        let (line, char) = link.split_once("|,|").unwrap();
-        (
-            id.to_string(),
-            NodeLink {
-                node: node.to_string(),
-                timestamp: timestamp.parse::<i64>().unwrap(),
-                line: line.parse::<u64>().unwrap(),
-                char: char.parse::<u64>().unwrap(),
+        let (line, link) = link.split_once("|,|").unwrap();
+        let (char, link_varient) = link.split_once("|,|").unwrap();
+        NodeLink {
+            node: node.to_string(),
+            text: text.to_string(),
+            timestamp: timestamp.parse::<i64>().unwrap(),
+            line: line.parse::<u64>().unwrap(),
+            char: char.parse::<u64>().unwrap(),
+            is_name_linked: match link_varient {
+                "name_ref" => true,
+                _ => false,
             },
-        )
+        }
     }
-    pub fn serialize_backlink_id(text: &String, timestamp: i64) -> String {
-        format!("{text}+|+{timestamp}")
+    pub fn parse_link_w_key(toml: String) -> (String, NodeLink) {
+        let link = Self::from_toml(toml);
+        (link.text.clone(), link)
     }
-    pub fn deserialize_backlink_id(id: &String) -> (String, i64) {
-        let (id, timestamp) = id.split_once("+|+").unwrap();
-        (id.to_string(), timestamp.parse::<i64>().unwrap())
+    pub fn parse_backlink_w_key(toml: String) -> ((String, i64), NodeLink) {
+        let link = Self::from_toml(toml);
+        ((link.text.clone(), link.timestamp), link)
     }
 }
 
@@ -375,16 +404,8 @@ impl NodeMeta {
         NodeMeta {
             name: node.name.clone(),
             tags,
-            links: node
-                .links
-                .iter()
-                .map(|(k, link)| link.to_toml(&k))
-                .collect(),
-            backlinks: node
-                .backlinks
-                .iter()
-                .map(|(k, link)| link.to_toml(&NodeLink::serialize_backlink_id(&k.0, k.1)))
-                .collect(),
+            links: node.links.values().map(|link| link.to_toml()).collect(),
+            backlinks: node.backlinks.values().map(|link| link.to_toml()).collect(),
             created: node.created,
             updated: node.updated,
             updates: node.updates,

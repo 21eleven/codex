@@ -35,10 +35,9 @@ pub fn nodekeys_in_dir<P: AsRef<Path>>(path: P) -> Vec<String> {
 
 pub fn meta_has_link<P: AsRef<Path>>(path: P, id: &String, link: &NodeLink) -> bool {
     let meta = NodeMeta::from_toml(&path.as_ref());
-    meta.links.contains(&link.to_toml(id))
+    meta.links.contains(&link.to_toml())
 }
 pub fn meta_has_backlink<P: AsRef<Path>>(path: P, id: &String, backlink: &NodeLink) -> bool {
     let meta = NodeMeta::from_toml(&path.as_ref());
-    let backlink_id = NodeLink::serialize_backlink_id(id, backlink.timestamp);
-    meta.backlinks.contains(&backlink.to_toml(&backlink_id))
+    meta.backlinks.contains(&backlink.to_toml())
 }

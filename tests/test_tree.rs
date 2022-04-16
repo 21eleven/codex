@@ -47,10 +47,17 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     assert!(tree.nodes.contains_key("2-desk/1-a/1-b"));
     let link_id = "link".to_string();
     tree.link(link_id.clone(), &b, 0, 0, &c, 0, 0);
+    tree.link("a".to_string(), &c, 100, 10, &a, 0, 0);
+    let anode = tree.nodes.get(&a).unwrap();
     let bnode = tree.nodes.get(&b).unwrap();
+    let cnode = tree.nodes.get(&c).unwrap();
+    let c_to_a_backlink = anode.backlinks.values().take(1).next().unwrap();
+    assert!(c_to_a_backlink.is_name_linked);
+    assert!(c_to_a_backlink.to_toml().contains("name_ref"));
+    assert!(&c_to_a_backlink.node == &c);
     assert!(bnode.links.contains_key(&link_id));
     let link = bnode.links.get(&link_id).unwrap().clone();
-    let cnode = tree.nodes.get(&c).unwrap();
+    assert!(&link.node == &c);
     assert!(cnode
         .backlinks
         .contains_key(&(link_id.clone(), link.timestamp)));
@@ -68,10 +75,10 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     let cnode_meta_toml = std::fs::read_to_string(cnode.metadata_path())
         .unwrap()
         .to_string();
-    assert!(
-        cnode_meta_toml.contains(&backlink.to_toml(&NodeLink::serialize_backlink_id(
-            &link_id,
-            backlink.timestamp
-        )))
-    );
+    dbg!(&cnode_meta_toml);
+    dbg!(&backlink);
+    dbg!(&backlink.to_toml());
+    dbg!(&c_to_a_backlink);
+    dbg!(&c_to_a_backlink.to_toml());
+    assert!(cnode_meta_toml.contains(&backlink.to_toml()));
 }
