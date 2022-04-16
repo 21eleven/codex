@@ -27,6 +27,7 @@ pub struct Node {
     pub links: HashMap<String, NodeLink>,
     pub backlinks: HashMap<(String, i64), NodeLink>,
     pub tags: HashSet<String>,
+    pub internal: HashSet<String>,
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
     pub updates: u64,
@@ -79,6 +80,7 @@ impl Node {
             links: HashMap::new(),
             backlinks: HashMap::new(),
             tags: HashSet::new(),
+            internal: HashSet::new(),
             created: now,
             updated: now,
             updates: 1,
@@ -146,6 +148,7 @@ impl Node {
                 .map(|(id, link)| (NodeLink::deserialize_backlink_id(id), link))
                 .collect(),
             tags: metadata.tags.into_iter().collect(),
+            internal: metadata.internal.into_iter().collect(),
             created: metadata.created,
             updated: metadata.updated,
             updates: metadata.updates,
@@ -347,6 +350,7 @@ pub struct NodeMeta {
     #[serde(with = "codex_date_format")]
     pub updated: DateTime<Local>,
     pub updates: u64,
+    pub internal: Vec<String>,
 }
 
 impl NodeMeta {
@@ -360,11 +364,14 @@ impl NodeMeta {
             created: now,
             updated: now,
             updates: 1,
+            internal: vec![],
         }
     }
     pub fn from(node: &Node) -> NodeMeta {
         let mut tags: Vec<String> = node.tags.clone().into_iter().collect();
         tags.sort_unstable();
+        let mut internal: Vec<String> = node.internal.clone().into_iter().collect();
+        internal.sort_unstable();
         NodeMeta {
             name: node.name.clone(),
             tags,
@@ -381,6 +388,7 @@ impl NodeMeta {
             created: node.created,
             updated: node.updated,
             updates: node.updates,
+            internal
         }
     }
     pub fn from_toml(toml_path: &Path) -> NodeMeta {
