@@ -154,6 +154,16 @@ impl Node {
             directory: PathBuf::from(directory),
         }
     }
+    pub fn create_child(&mut self, name: String, path: &str) -> Node {
+        let child = Node::create(name, Some(self), path);
+        self.children.push(child.id.clone());
+        self.tick_update_and_write_meta();
+        child
+    }
+    fn tag(&mut self, new_tag: String) {
+        self.tags.insert(new_tag);
+        self.tick_update_and_write_meta();
+    }
     pub fn insert_link(&mut self, link: NodeLink) {
         self.links.insert(link.text.clone(), link);
         self.tick_update_and_write_meta();
@@ -219,16 +229,6 @@ impl Node {
         }
         self.updated = now;
         self.write_meta();
-    }
-    pub fn create_child(&mut self, name: String, path: &str) -> Node {
-        let child = Node::create(name, Some(self), path);
-        self.children.push(child.id.clone());
-        self.tick_update_and_write_meta();
-        child
-    }
-    fn tag(&mut self, new_tag: String) {
-        self.tags.insert(new_tag);
-        self.tick_update_and_write_meta();
     }
 }
 impl Telescoped for Node {
