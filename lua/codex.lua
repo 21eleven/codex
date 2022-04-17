@@ -160,6 +160,97 @@ function M.new_node()
   return picker:find()
 end
 
+function leftward_delim_pos(ln, col, delim, opposing_delim)
+  local len = string.len(ln)
+  if len < 1 then
+    return nil
+  end
+  col = math.min(len, col)
+  col = math.max(1, col)
+  local delim_offset = string.len(delim)-1
+  local delim_start = nil
+  for i=0, delim_offset, 1 do
+    local a = math.max(col-i, 1)
+    local b = col+delim_offset-i
+    if string.sub(ln, a, b) == delim then
+      delim_start = a
+    end
+  end
+  if delim_start == nil then
+    local look_left = string.sub(ln, 1, col-1)
+    look_left = string.reverse(look_left);
+    local i, j = string.find(look_left, delim, nil, true)
+    if j == nil then
+      return nil
+    end
+    -- opposing_delim is within link text then it is invalid
+    if string.find(string.sub(look_left, 1, i), opposing_delim, nil, true) ~= nil then
+      return nil
+    end
+    delim_start = col-j
+  end
+  return delim_start
+end
+
+function rightward_delim_pos(ln, col, delim, opposing_delim)
+  local len = string.len(ln)
+  if col > len then
+    return nil
+  end
+  col = math.min(len, col)
+  col = math.max(1, col)
+  local delim_offset = string.len(delim)-1
+  local delim_end = nil
+  for i=0, delim_offset, 1 do
+    local a = col-i
+    local b = col+delim_offset-i
+    if string.sub(ln, a, b) == delim then
+      delim_end = b
+    end
+  end
+  if delim_end == nil then
+    local look_right = string.sub(ln, col+1)
+    local i, j = string.find(look_right, delim, nil, true)
+    if j == nil then
+      return nil
+    end
+    -- opposing_delim is within link text then it is invalid
+    if string.find(string.sub(look_right, 1, i), opposing_delim, nil, true) ~= nil then
+      return nil
+    end
+    delim_end = col+j
+  end
+  return delim_end
+end
+
+function extract_delimited_text(ln, col, left_delim, right_delim, full)
+  local delimited_start = leftward_delim_pos(ln, col, left_delim, right_delim)
+  local delimited_end = rightward_delim_pos(ln, col, right_delim, left_delim)
+  if delimited_start == nil or delimited_end == nil then
+    return nil
+  elseif full == nil then
+    local left = delimited_start+string.len(left_delim)
+    local right = delimited_end-string.len(right_delim)
+    return string.sub(ln, left, right)
+  else
+    return string.sub(ln, delimited_start, delimited_end)
+  end
+end
+
+function M.find_link_id()
+  -- get the column of the current cursor
+  -- get a string that represents the current line.
+  -- is the character under the cursor [ or ]
+  -- of so that is a special case
+  -- if not then look leftward of the current column
+  -- to find the next occurance of "[[" not the string idx
+  -- position of it.
+  -- look rightward to find the next occurance
+  local ln = vim.api.nvim_get_current_line()
+  local col = vim.api.nvim_win_get_cursor({ window = 0 })[2];
+  return extract_delimited_text(ln, col, "[[", "]]")
+end
+
 function M.todo()
   local ln = vim.api.nvim_get_current_line()
   if string.match(ln, "- %[%]") then
