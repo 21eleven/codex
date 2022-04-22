@@ -95,3 +95,21 @@ fn node_index_parse(dir_and_tree: (TempDir, Tree)) {
     let bnode = tree.nodes.get(&b).unwrap();
     assert_eq!(bnode.index(), 1);
 }
+
+#[rstest]
+fn next_sibling(dir_and_tree: (TempDir, Tree)) {
+    let dir = dir_and_tree.0;
+    let mut tree = dir_and_tree.1;
+    let a = tree.create_node(Some("2-desk"), Some("a")).unwrap();
+    let b = tree.create_node(Some(&a), Some("b")).unwrap();
+    let c = tree.create_node(Some("2-desk"), Some("c")).unwrap();
+    let d = tree.create_node(Some("2-desk"), Some("d")).unwrap();
+    assert_eq!(tree.next_sibling(&b, true), b);
+    assert_eq!(tree.next_sibling(&b, false), b);
+    assert_eq!(tree.next_sibling(&a, true), d);
+    assert_eq!(tree.next_sibling(&a, false), c);
+    assert_eq!(tree.next_sibling(&c, true), a);
+    assert_eq!(tree.next_sibling(&c, false), d);
+    assert_eq!(tree.next_sibling(&d, true), c);
+    assert_eq!(tree.next_sibling(&d, false), a);
+}

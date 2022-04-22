@@ -453,4 +453,22 @@ impl Tree {
         let journal_node = self.nodes.get(&self.journal).unwrap();
         journal_node.children[journal_node.children.len() - 1].clone()
     }
+    pub fn next_sibling(&self, node: &NodeKey, previous: bool) -> NodeKey {
+        let child = self.nodes.get(node).unwrap();
+        let parent_key = match &child.parent {
+            None => return child.id.clone(), // TODO handle when node is on bottom level
+            Some(parent) => parent,
+        };
+        let parent = self.nodes.get(parent_key).unwrap();
+        let family_size = parent.children.len();
+        let index = child.index();
+        let mut sibling_index = if previous { index-1 } else { index+1 };
+        sibling_index %= family_size;
+        if sibling_index == 0 {
+            sibling_index = family_size;
+        }
+        // nodes are 1 indexed in the tree heirarchy
+        // the children vec is zero indexed
+        parent.children[sibling_index-1].clone()
+    }
 }
