@@ -82,3 +82,16 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     dbg!(&c_to_a_backlink.to_toml());
     assert!(cnode_meta_toml.contains(&backlink.to_toml()));
 }
+
+
+#[rstest]
+fn node_index_parse(dir_and_tree: (TempDir, Tree)) {
+    let dir = dir_and_tree.0;
+    let mut tree = dir_and_tree.1;
+    let a = tree.create_node(Some("2-desk"), Some("a")).unwrap();
+    let b = tree.create_node(Some(&a), Some("b")).unwrap();
+    let desk = tree.nodes.get(&"2-desk".to_string()).unwrap();
+    assert_eq!(desk.index(), 2);
+    let bnode = tree.nodes.get(&b).unwrap();
+    assert_eq!(bnode.index(), 1);
+}

@@ -154,6 +154,14 @@ impl Node {
             directory: PathBuf::from(directory),
         }
     }
+    pub fn index(&self) -> usize {
+        let path = match self.id.rsplit_once('/') {
+            Some((_, node)) => node,
+            None => self.id.as_str()
+        };
+        let (num, name) = path.split_once('-').unwrap();
+        num.parse::<usize>().unwrap()
+    }
     pub fn create_child(&mut self, name: String, path: &str) -> Node {
         let child = Node::create(name, Some(self), path);
         self.children.push(child.id.clone());

@@ -45,6 +45,7 @@ fn telescope_child_nodes(id: &str, tree: &tree::Tree) -> Value {
     }
 }
 
+// make method on tree
 fn node_parent(id: &str, tree: &tree::Tree) -> Option<String> {
     match tree.nodes.get(id) {
         Some(node) => node.parent.clone(),

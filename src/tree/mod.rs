@@ -108,7 +108,7 @@ pub fn next_sibling_id(key: &PathBuf) -> u64 {
     metas.len() as u64 + 1
 }
 
-pub fn next_child_id(path: &String) -> u64 {
+pub fn next_child_id(path: &str) -> u64 {
     let path = PathBuf::from(path);
     // why not just look in child array of parent?
     // TODO: check search_dir exists?
@@ -430,23 +430,27 @@ impl Tree {
     pub fn link(
         &mut self,
         text: String,
-        from: &String,
+        from: &str,
         from_line: u64,
         from_char: u64,
-        to: &String,
+        to: &str,
         to_line: u64,
         to_char: u64,
     ) {
         let (link, backlink) = NodeLink::pair(
             text,
-            from.clone(),
+            from.to_string(),
             from_line,
             from_char,
-            to.clone(),
+            to.to_string(),
             to_line,
             to_char,
         );
         self.nodes.get_mut(from).unwrap().insert_link(link);
         self.nodes.get_mut(to).unwrap().insert_backlink(backlink);
+    }
+    pub fn latest_journal(&self) ->NodeKey {
+        let journal_node = self.nodes.get(&self.journal).unwrap();
+        journal_node.children[journal_node.children.len() - 1].clone()
     }
 }
