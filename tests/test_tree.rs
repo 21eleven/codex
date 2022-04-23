@@ -83,7 +83,6 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     assert!(cnode_meta_toml.contains(&backlink.to_toml()));
 }
 
-
 #[rstest]
 fn node_index_parse(dir_and_tree: (TempDir, Tree)) {
     let dir = dir_and_tree.0;

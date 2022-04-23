@@ -157,7 +157,7 @@ impl Node {
     pub fn index(&self) -> usize {
         let path = match self.id.rsplit_once('/') {
             Some((_, node)) => node,
-            None => self.id.as_str()
+            None => self.id.as_str(),
         };
         let (num, name) = path.split_once('-').unwrap();
         num.parse::<usize>().unwrap()

@@ -256,11 +256,19 @@ impl Handler for NeovimHandler {
             }
             "prev-sibling" => {
                 let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
-                Ok(Value::String(self.tree.lock().unwrap().next_sibling(args[0], true).into()))
+                Ok(Value::String(
+                    self.tree.lock().unwrap().next_sibling(args[0], true).into(),
+                ))
             }
             "next-sibling" => {
                 let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
-                Ok(Value::String(self.tree.lock().unwrap().next_sibling(args[0], false).into()))
+                Ok(Value::String(
+                    self.tree
+                        .lock()
+                        .unwrap()
+                        .next_sibling(args[0], false)
+                        .into(),
+                ))
             }
             _ => Ok(Value::Nil),
         }
