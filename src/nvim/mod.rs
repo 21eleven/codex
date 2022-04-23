@@ -249,6 +249,19 @@ impl Handler for NeovimHandler {
                     Ok(Value::Nil)
                 }
             }
+            "latest-journal" => {
+                let page = self.tree.lock().unwrap().latest_journal();
+                debug!("{page}");
+                Ok(Value::String(page.into()))
+            }
+            "prev-sibling" => {
+                let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
+                Ok(Value::String(self.tree.lock().unwrap().next_sibling(args[0], true).into()))
+            }
+            "next-sibling" => {
+                let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
+                Ok(Value::String(self.tree.lock().unwrap().next_sibling(args[0], false).into()))
+            }
             _ => Ok(Value::Nil),
         }
     }

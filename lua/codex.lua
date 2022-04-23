@@ -277,15 +277,35 @@ map('n', '<leader>f', ":lua Codex.nodes() <CR>", opt)
 map('n', '<leader>c', ":lua Codex.children() <CR>", opt)
 map('n', '<leader>p', ":lua Codex.parent() <CR>", opt)
 map('n', '<leader>n', ":lua Codex.new_node() <CR>", opt)
+map('n', '<leader>y', ":lua Codex.latest_journal() <CR>", opt)
+map('n', '<leader>u', ":lua Codex.prev_sibling() <CR>", opt)
+map('n', '<leader>i', ":lua Codex.next_sibling() <CR>", opt)
 
 function M.plugin_dir()
     return plugin_dir
 end
 
+function M.current_node()
+  local node = string.gsub(vim.fn.expand("%"), "/_.md", "")
+  return node
+end
+
 function M.parent()
-  local curr_node = string.gsub(vim.fn.expand("%"), "/_.md", "")
+  local curr_node = M.current_node()
   local parent = vim.rpcrequest(_t.job_id, "parent", curr_node)
   vim.cmd("e " .. parent .. "/_.md")
+end
+function M.latest_journal()
+  local latest = vim.rpcrequest(_t.job_id, "latest-journal")
+  vim.cmd("e " .. latest .. "/_.md")
+end
+function M.prev_sibling()
+  local sibling = vim.rpcrequest(_t.job_id, "prev-sibling", M.current_node())
+  vim.cmd("e " .. sibling .. "/_.md")
+end
+function M.next_sibling()
+  local sibling = vim.rpcrequest(_t.job_id, "next-sibling", M.current_node())
+  vim.cmd("e " .. sibling .. "/_.md")
 end
 
 function M.children()

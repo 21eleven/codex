@@ -453,7 +453,7 @@ impl Tree {
         let journal_node = self.nodes.get(&self.journal).unwrap();
         journal_node.children[journal_node.children.len() - 1].clone()
     }
-    pub fn next_sibling(&self, node: &NodeKey, previous: bool) -> NodeKey {
+    pub fn next_sibling(&self, node: &str, previous: bool) -> NodeKey {
         let child = self.nodes.get(node).unwrap();
         let parent_key = match &child.parent {
             None => return child.id.clone(), // TODO handle when node is on bottom level
