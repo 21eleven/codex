@@ -181,6 +181,10 @@ impl Node {
             .insert((backlink.text.clone(), backlink.timestamp), backlink);
         self.tick_update_and_write_meta();
     }
+    pub fn get_link(&self, link_id: &str) -> (NodeKey, u64) {
+        let link = self.links.get(link_id).unwrap();
+        (link.node.clone(), link.line)
+    }
     pub fn rerank(&mut self, rank: u64) {
         todo!();
     }

@@ -46,8 +46,8 @@ fn create_and_link_nodes(dir_and_tree: (TempDir, Tree)) {
     assert_eq!(number_of_nodes(dir.path()), 5);
     assert!(tree.nodes.contains_key("2-desk/1-a/1-b"));
     let link_id = "link".to_string();
-    tree.link(link_id.clone(), &b, 0, 0, &c, 0, 0);
-    tree.link("a".to_string(), &c, 100, 10, &a, 0, 0);
+    tree.link(&link_id, &b, 0, 0, &c, 0, 0);
+    tree.link("a", &c, 100, 10, &a, 0, 0);
     let anode = tree.nodes.get(&a).unwrap();
     let bnode = tree.nodes.get(&b).unwrap();
     let cnode = tree.nodes.get(&c).unwrap();

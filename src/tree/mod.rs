@@ -429,7 +429,7 @@ impl Tree {
     }
     pub fn link(
         &mut self,
-        text: String,
+        text: &str,
         from: &str,
         from_line: u64,
         from_char: u64,
@@ -438,7 +438,7 @@ impl Tree {
         to_char: u64,
     ) {
         let (link, backlink) = NodeLink::pair(
-            text,
+            text.to_string(),
             from.to_string(),
             from_line,
             from_char,
@@ -448,6 +448,10 @@ impl Tree {
         );
         self.nodes.get_mut(from).unwrap().insert_link(link);
         self.nodes.get_mut(to).unwrap().insert_backlink(backlink);
+    }
+    pub fn get_link(&self, name: &str, text: &str) -> (NodeKey, u64) {
+        let node = self.nodes.get(name).unwrap();
+        node.get_link(text)
     }
     pub fn latest_journal(&self) -> NodeKey {
         let journal_node = self.nodes.get(&self.journal).unwrap();

@@ -5,6 +5,13 @@ local action_state = require "telescope.actions.state"
 
 local Input = require("nui.input")
 local event = require("nui.utils.autocmd").event
+local Picker = require('telescope.pickers')
+local Finder = require('telescope.finders')
+local Sorter = require('telescope.sorters')
+local Previewer = require('telescope.previewers')
+
+local vim = vim
+local io = require "io"
 
 -- Would be installed where? .local/share/codex?
 local plugin_dir = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file("lua/codex.lua", false)[1], ":h:h")
@@ -29,6 +36,8 @@ end
 vim.fn.setenv("CODEX_RUNTIME_DIR", config.codex_directory)
 
 local _t = {}
+_t.crumbs = 0
+_t.crumb_path = {}
 if config.git_remote ~= nil then
     vim.fn.setenv("CODEX_GIT_REMOTE", config.git_remote)
 end
@@ -53,6 +62,16 @@ function M.stop()
     _t.job_id = nil
 end
 
+function M.debug(arg)
+    print("sending debug ", arg)
+    vim.rpcnotify(_t.job_id, "debug", arg)
+end
+
+function M.chk(arg)
+    print("sending chk ", arg)
+    vim.rpcrequest(_t.job_id, "chk", arg)
+end
+
 function M.get_nodes()
   return vim.rpcrequest(_t.job_id, "nodes")
 end
@@ -68,9 +87,6 @@ end
 
 function M.nodes()
   local nodes = M.get_nodes()
-  local Picker = require('telescope.pickers')
-  local Finder = require('telescope.finders')
-  local Sorter = require('telescope.sorters')
   local finder_fn = Finder.new_table({
     results = nodes,
     entry_maker = M.entry_maker
@@ -82,6 +98,7 @@ function M.nodes()
     sorter = Sorter.get_generic_fuzzy_sorter(),
     previewer = require('telescope.previewers').new_termopen_previewer({
       get_command = function(entry)
+        -- what if bat is not in that directory...?
         return {'/usr/bin/bat', '--style=plain', entry.value }
       end,
     }),
@@ -92,10 +109,6 @@ end
 
 function M.new_node()
   local nodes = M.get_nodes()
-  local Picker = require('telescope.pickers')
-  local Finder = require('telescope.finders')
-  local Sorter = require('telescope.sorters')
-  local Previewer = require('telescope.previewers')
   local finder_fn = Finder.new_table({
     results = nodes,
     entry_maker = M.entry_maker
@@ -247,8 +260,141 @@ function M.find_link_id()
   -- position of it.
   -- look rightward to find the next occurance
   local ln = vim.api.nvim_get_current_line()
-  local col = vim.api.nvim_win_get_cursor({ window = 0 })[2];
+  -- local col = vim.api.nvim_win_get_cursor({ window = 0 })[2];
+  local col = vim.api.nvim_win_get_cursor(0)[2];
   return extract_delimited_text(ln, col, "[[", "]]")
+end
+
+function M.follow_link()
+  local curr_node = M.current_node()
+  local text = M.find_link_id()
+  if text == nil then
+    print("No link under text")
+    return
+  end
+  local target = vim.rpcrequest(_t.job_id, "follow-link", curr_node, text)
+  if target ~= nil then 
+    vim.cmd("e +" .. target.line .. " " .. target.node .. "/_.md")
+    M._push_breadcrumb(curr_node)
+  else
+    print("Unable to retrieve link from backend")
+  end
+end
+
+function M._push_breadcrumb(node)
+  _t.crumbs = _t.crumbs + 1
+  table.insert(_t.crumb_path, node)
+end
+
+function M._pop_breadcrumb()
+  local target = table.remove(_t.crumb_path, _t.crumbs)
+  if target ~= nil then
+    _t.crumbs = _t.crumbs - 1
+  end
+  return target
+end
+
+function M.back()
+  local target = M._pop_breadcrumb()
+  if target ~= nil then
+    vim.cmd("e " .. target .. "/_.md")
+  else
+    print("No breadcrumbs to follow backwards")
+  end
+end
+
+
+function M.visual_selection_range()
+  local _, csrow, cscol, _ = unpack(vim.fn.getpos("'<"))
+  local _, cerow, cecol, _ = unpack(vim.fn.getpos("'>"))
+  if csrow < cerow or (csrow == cerow and cscol <= cecol) then
+    return csrow - 1, cscol , cerow - 1, cecol
+  else
+    return cerow - 1, cecol, csrow - 1, cscol
+  end
+end
+
+function M.get_visual_selection()
+  local srow, scol, erow, ecol = M.visual_selection_range()
+  local ln = vim.api.nvim_get_current_line()
+  local sel
+  if srow ~= erow then
+    sel = string.sub(ln, scol)
+  else
+    sel = string.sub(ln, scol, ecol)
+  end
+  return sel, srow, scol
+end
+
+function M.file_lines(file_path)
+  -- local file = io.open(file_path)
+  local lines = io.open(file_path):lines()
+  -- local lines = file:lines()
+  local entries = {}
+  local c = 0
+  for ln in lines do
+    c = c + 1
+    table.insert(entries, {value = ln, display = ln, ordinal = c})
+  end
+  return entries
+end
+
+function M.link_from_visual()
+  local curr_node = string.gsub(vim.fn.expand("%"), "/_.md", "")
+  local text, ln, col = M.get_visual_selection()
+  vim.cmd("'<,'>s/" .. text .. "/[[" .. text .. "]]/g")
+  local nodes = M.get_nodes()
+  local finder_fn = Finder.new_table({
+    results = nodes,
+    entry_maker = M.entry_maker
+  })
+  local target
+  local picker = Picker:new({
+    prompt_title = 'link target',
+    finder = finder_fn,
+    sorter = Sorter.get_generic_fuzzy_sorter(),
+    -- previewer = Previewer.vim_buffer_cat.new(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat', '--style=plain', entry.value }
+      end,
+    }),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        target = action_state.get_selected_entry()
+        local line_entries = M.file_lines(target.value)
+        local lnpicker = Picker:new({
+          prompt_title = 'link line',
+          sorting_strategy = 'descending',
+          finder = Finder.new_table({
+            results = line_entries,
+            entry_maker = function (x) return x end
+          }),
+          sorter = Sorter.get_generic_fuzzy_sorter({sorting_strategy = 'descending'}),
+          -- previewer = Previewer.vim_buffer_cat.new(),
+          previewer = require('telescope.previewers').new_termopen_previewer({
+            get_command = function(entry)
+              return {'/usr/bin/bat', '--style=plain', '--line-range', ':' .. entry.ordinal, target.value }
+            end,
+          }),
+          attach_mappings = function(prompt_bufnr, map)
+            actions.select_default:replace(function()
+              actions.close(prompt_bufnr)
+              local line = action_state.get_selected_entry()
+              -- M.debug(line)
+              vim.rpcrequest(_t.job_id, "link", text, curr_node, ln, col, target.ordinal, line.ordinal, 0 )
+              -- vim.rpcrequest(_t.job_id, "debug", curr_node, ln, col, target.ordinal, line.ordinal, 0 )
+            end)
+            return true
+          end
+        })
+        lnpicker:find()
+      end)
+      return true
+    end
+  })
+  picker:find()
 end
 
 function M.todo()
@@ -280,6 +426,11 @@ map('n', '<leader>n', ":lua Codex.new_node() <CR>", opt)
 map('n', '<leader>y', ":lua Codex.latest_journal() <CR>", opt)
 map('n', '<leader>u', ":lua Codex.prev_sibling() <CR>", opt)
 map('n', '<leader>i', ":lua Codex.next_sibling() <CR>", opt)
+map('v', '<leader>l', ":lua Codex.link_from_visual() <CR>", opt)
+map('n', '<leader>l', ":lua Codex.follow_link() <CR>", opt)
+map('n', 'zl', ":lua Codex.follow_link() <CR>", opt)
+map('n', 'zb', ":lua Codex.back() <CR>", opt)
+map('n', '<leader><leader>l', ":lua Codex.back() <CR>", opt)
 
 function M.plugin_dir()
     return plugin_dir
@@ -311,10 +462,6 @@ end
 function M.children()
   local curr_node = string.gsub(vim.fn.expand("%"), "/_.md", "")
   local nodes = vim.rpcrequest(_t.job_id, "children", curr_node)
-  local Picker = require('telescope.pickers')
-  local Finder = require('telescope.finders')
-  local Sorter = require('telescope.sorters')
-  local Previewer = require('telescope.previewers')
   local finder_fn = Finder.new_table({
     results = nodes,
     entry_maker = M.entry_maker

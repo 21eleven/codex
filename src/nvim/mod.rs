@@ -202,6 +202,11 @@ impl Handler for NeovimHandler {
                     _ => {}
                 }
             }
+            "debug" => {
+                debug!("/////////// DEBUG ///////////");
+                debug!("{:?}", _args);
+                debug!("/////////// DEBUG ///////////");
+            }
             // "stop" => {
             //     push_to_git_remote().unwrap();
             //     info!("local pushed to remote");
@@ -234,6 +239,45 @@ impl Handler for NeovimHandler {
                 Ok(Value::Nil)
             }
             "nodes" => Ok(telescope_nodes(&*self.tree.lock().unwrap())),
+            "chk" => {
+                debug!("/////////// DEBUG ///////////");
+                debug!("{:?}", _args);
+                debug!("/////////// DEBUG ///////////");
+                Ok(Value::Nil)
+            }
+            "link" => {
+                // let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
+                // debug!("{:?}", _args);
+                
+                let text = _args[0].as_str().unwrap();
+                let from = _args[1].as_str().unwrap();
+                let from_ln = _args[2].as_u64().unwrap();
+                let from_col = _args[3].as_u64().unwrap();
+                let to = _args[4].as_str().unwrap();
+                let to_ln = _args[5].as_u64().unwrap();
+                let to_col = _args[6].as_u64().unwrap();
+                debug!("{text} {from} {from_ln} {from_col} {to} {to_ln} {to_col}");
+                self.tree.lock().unwrap().link(text, from, from_ln, from_col, to, to_ln, to_col);
+                Ok(Value::Nil)
+            }
+            "follow-link" => {
+                // let node = _args[0].to_string();
+                // let link_id = _args[1].to_string();
+                let node = _args[0].as_str().unwrap();
+                let link_id = _args[1].as_str().unwrap();
+                debug!("{node} {link_id}");
+                let names: Vec<String> = self.tree.lock().unwrap().nodes.keys().map(|k| k.clone()).collect();
+                debug!("{names:?}");
+                let (link, line) = self.tree.lock().unwrap().get_link(node, link_id);
+                Ok(
+                    Value::from(
+                        vec![
+                            (Value::from("node"), Value::from(link)),
+                            (Value::from("line"), Value::from(line)),
+                        ]
+                    )
+                )
+            }
             "children" => {
                 debug!("{:?}", _args);
                 let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();

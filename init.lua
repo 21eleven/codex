@@ -41,5 +41,7 @@ require('packer').startup(function()
   Codex.config.packages(use)
 end)
 require('telescope').load_extension('codex')
+vim.cmd [[ autocmd BufEnter *.md hi nodelink ctermfg=cyan guifg=cyan cterm=bold,underline gui=bold ]]
+vim.cmd [[ autocmd BufEnter *.md syn region nodelink start=+\[\[+ end=+\]\]+ ]]
 vim.cmd [[autocmd VimEnter * lua Codex.start()]]
 vim.cmd [[autocmd VimLeave * lua Codex.stop()]]
