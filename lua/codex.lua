@@ -397,6 +397,51 @@ function M.link_from_visual()
   picker:find()
 end
 
+function M.name_link()
+  local curr_node = string.gsub(vim.fn.expand("%"), "/_.md", "")
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local ln_num = cursor[1]
+  local col = cursor[2]
+  local ln = vim.api.nvim_get_current_line()
+  local nodes = M.get_nodes()
+  local finder_fn = Finder.new_table({
+    results = nodes,
+    entry_maker = M.entry_maker
+  })
+  local target
+  local picker = Picker:new({
+    prompt_title = 'link target',
+    finder = finder_fn,
+    sorter = Sorter.get_generic_fuzzy_sorter(),
+    -- previewer = Previewer.vim_buffer_cat.new(),
+    previewer = require('telescope.previewers').new_termopen_previewer({
+      get_command = function(entry)
+        return {'/usr/bin/bat', '--style=plain', entry.value }
+      end,
+    }),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        target = action_state.get_selected_entry()
+        local node = target.ordinal
+        local text = nil
+        -- I should probably make this an rpc call
+        for name in string.gmatch(node, "[^/]+") do
+          text = name
+        end
+        text = string.gsub(text, "^%d+-", "")
+        text = string.gsub(text, "-", " ")
+        -- M.debug(text)
+        vim.rpcrequest(_t.job_id, "link", text, curr_node, ln_num, col, target.ordinal, 0, 0 )
+        local nline = ln:sub(0, col) .. '[[' .. text .. ']]' .. ln:sub(col + 1)
+        vim.api.nvim_set_current_line(nline)
+      end)
+      return true
+    end
+  })
+  picker:find()
+end
+
 function M.todo()
   local ln = vim.api.nvim_get_current_line()
   if string.match(ln, "- %[%]") then
@@ -427,6 +472,7 @@ map('n', '<leader>y', ":lua Codex.latest_journal() <CR>", opt)
 map('n', '<leader>u', ":lua Codex.prev_sibling() <CR>", opt)
 map('n', '<leader>i', ":lua Codex.next_sibling() <CR>", opt)
 map('v', '<leader>l', ":lua Codex.link_from_visual() <CR>", opt)
+map('n', 'zn', ":lua Codex.name_link() <CR>", opt)
 map('n', '<leader>l', ":lua Codex.follow_link() <CR>", opt)
 map('n', 'zl', ":lua Codex.follow_link() <CR>", opt)
 map('n', 'zb', ":lua Codex.back() <CR>", opt)
