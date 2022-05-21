@@ -38,8 +38,10 @@ require('packer').startup(function(use)
     requires = { {'nvim-lua/plenary.nvim'} }
   }
   use 'MunifTanjim/nui.nvim'
+  use 'nvim-lualine/lualine.nvim'
   Codex.config.packages(use)
 end)
+require('lualine').setup{sections = { lualine_c = {"g:word_count", "filename"}}}
 require('telescope').load_extension('codex')
 vim.cmd [[ autocmd BufEnter *.md hi nodelink ctermfg=cyan guifg=cyan cterm=bold,underline gui=bold ]]
 vim.cmd [[ autocmd BufEnter *.md syn region nodelink start=+\[\[+ end=+\]\]+ ]]
