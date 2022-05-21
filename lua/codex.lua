@@ -1,4 +1,5 @@
 local M = {}
+vim.g.word_count = 0
 
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
@@ -60,6 +61,10 @@ function M.stop()
     -- vim.rpcnotify(_t.job_id, "stop")
     -- vim.fn.jobstop(_t.job_id)
     _t.job_id = nil
+end
+
+function M.update_word_count()
+    vim.rpcnotify(_t.job_id, "word-count")
 end
 
 function M.debug(arg)

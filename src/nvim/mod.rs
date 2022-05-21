@@ -107,6 +107,14 @@ impl Handler for NeovimHandler {
                     .await
                     .unwrap();
             }
+            "word-count" => {
+                let added = diff_w_main().unwrap();
+                debug!("WORD COUNT UPDATE: {}", added);
+                neovim
+                    .command(&format!("lua vim.g.word_count = {added}"))
+                    .await
+                    .unwrap();
+            }
             "diff_last" => {
                 let added = diff_w_last_commit().unwrap();
                 debug!("words added (vs prev commit): {}", added);
