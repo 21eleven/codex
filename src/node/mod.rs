@@ -31,7 +31,7 @@ pub struct Node {
     pub created: DateTime<Local>,
     pub updated: DateTime<Local>,
     pub updates: u64,
-    directory: PathBuf,
+    pub directory: PathBuf,
 }
 
 impl fmt::Display for Node {
@@ -195,7 +195,11 @@ impl Node {
         self.id = new_path;
         todo!();
     }
-    pub fn rename_link(&mut self, old_name: &str, new_name: &str) {
+    pub fn rename_link(&mut self, id: &str, new_name: &str) {
+        if let Some(link) = self.links.get_mut(id) {
+            link.node = new_name.to_string();
+        }
+        self.write_meta()
         // TODO rename all instances of the link in the content file
         // for i in 0..self.links.len() {
         // should links be a hashset?
@@ -207,13 +211,15 @@ impl Node {
         // self.links.remove(old_name);
         // self.links.insert(new_name.to_string());
         // self.write_meta();
-        todo!()
     }
-    pub fn rename_backlink(&mut self, old_name: &str, new_name: &str) {
+    pub fn rename_backlink(&mut self, id: &(String, i64), new_name: &str) {
+        if let Some(backlink) = self.backlinks.get_mut(id) {
+            backlink.node = new_name.to_string();
+        }
+        self.write_meta()
         // self.backlinks.remove(old_name);
         // self.backlinks.insert(new_name.to_string());
         // self.write_meta();
-        todo!()
     }
     pub fn metadata_path(&self) -> PathBuf {
         self.directory.join(&self.id).join("meta.toml")

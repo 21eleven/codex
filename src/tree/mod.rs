@@ -332,21 +332,21 @@ impl Tree {
                             // node_clone.mv(newid.clone());
                             node_clone.id = newid.clone();
                             debug!("renaming {:?} to {:?}", sibid, &newid);
-                            let old_path = PathBuf::from(".").join(&sibid);
-                            let new_path = PathBuf::from(".").join(&newid);
+                            let old_path = node_clone.directory.join(&sibid);
+                            let new_path = node_clone.directory.join(&newid);
                             // move sib node on fs
                             rename(old_path, new_path).unwrap();
                             // link is another node
                             // that this node points to in its content
                             for (id, link) in &node_clone.links {
                                 let linked = self.nodes.get_mut(&link.node).unwrap();
-                                linked.rename_backlink(sibid, &newid);
+                                linked.rename_backlink(&(id.clone(), link.timestamp), &newid);
                             }
                             // a backlink is a node that has a link
                             // in its content that points to this node
                             for (id, backlink) in &node_clone.backlinks {
                                 let backlinked = self.nodes.get_mut(&backlink.node).unwrap();
-                                backlinked.rename_link(sibid, &newid);
+                                backlinked.rename_link(&id.0, &newid);
                             }
                             // all children need to be renamed since their
                             // parent has a new id and that suffixes their
@@ -358,7 +358,7 @@ impl Tree {
                                 parent: &NodeKey,
                                 map: &mut BTreeMap<NodeKey, Node>,
                             ) -> NodeKey {
-                                // remove child from amp
+                                // remove child from map
                                 let mut node = map.remove(node_ref).unwrap();
                                 let (_, node_name) = node_ref.rsplit_once('/').unwrap();
                                 // calc new name
@@ -366,11 +366,11 @@ impl Tree {
                                 // inform links
                                 for (id, link) in &node.links {
                                     let linked = map.get_mut(&link.node).unwrap();
-                                    linked.rename_backlink(node_ref, &newid);
+                                    linked.rename_backlink(&(id.clone(), link.timestamp), &newid);
                                 }
                                 for (id, backlink) in &node.backlinks {
                                     let backlinked = map.get_mut(&backlink.node).unwrap();
-                                    backlinked.rename_link(node_ref, &newid);
+                                    backlinked.rename_link(&id.0, &newid);
                                 }
                                 node.parent = Some(parent.to_string());
                                 node.id = newid.clone();
