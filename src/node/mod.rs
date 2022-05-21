@@ -200,26 +200,12 @@ impl Node {
             link.node = new_name.to_string();
         }
         self.write_meta()
-        // TODO rename all instances of the link in the content file
-        // for i in 0..self.links.len() {
-        // should links be a hashset?
-        // if self.links[i] == *old_name {
-        // self.links[i] = new_name.clone().to_path_buf();
-        // break
-        // }
-        // }
-        // self.links.remove(old_name);
-        // self.links.insert(new_name.to_string());
-        // self.write_meta();
     }
     pub fn rename_backlink(&mut self, id: &(String, i64), new_name: &str) {
         if let Some(backlink) = self.backlinks.get_mut(id) {
             backlink.node = new_name.to_string();
         }
         self.write_meta()
-        // self.backlinks.remove(old_name);
-        // self.backlinks.insert(new_name.to_string());
-        // self.write_meta();
     }
     pub fn metadata_path(&self) -> PathBuf {
         self.directory.join(&self.id).join("meta.toml")
