@@ -41,7 +41,6 @@ require('packer').startup(function(use)
   use 'nvim-lualine/lualine.nvim'
   Codex.config.packages(use)
 end)
-Codex.update_word_count()
 vim.api.nvim_create_autocmd('BufWritePost', { command = 'lua Codex.update_word_count()' })
 require('lualine').setup{sections = { lualine_c = {"g:word_count", "filename"}}}
 require('telescope').load_extension('codex')

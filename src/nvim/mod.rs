@@ -91,6 +91,11 @@ impl Handler for NeovimHandler {
                 handle_git_branching().unwrap();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
+                let added = diff_w_main().unwrap();
+                neovim
+                    .command(&format!("lua vim.g.word_count = {added}"))
+                    .await
+                    .unwrap();
                 stage_all().unwrap();
 
                 // let today = tree.today_node();
