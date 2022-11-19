@@ -4,6 +4,7 @@ use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::git::sync::{cmdline_fetch_and_pull, push_all_to_git_remote_cmd};
 use crate::tree;
 use crate::tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
@@ -86,9 +87,19 @@ impl Handler for NeovimHandler {
                     neovim.command(&format!("cd {}", dir)).await.unwrap()
                 }
                 debug!("pwd: {:?}", std::env::current_dir().unwrap());
+                debug!(
+                    "env vars: {:?}",
+                    std::env::vars()
+                        .into_iter()
+                        .collect::<Vec<(String, String)>>()
+                );
                 on_start(neovim.clone()).await;
-                fetch_and_pull().unwrap();
+                // fetch_and_pull().unwrap();
+                cmdline_fetch_and_pull();
                 handle_git_branching().unwrap();
+                // the tree is build prior to managing branches... so if you switch away from
+                // today's branch you may see some weird behavior (branch switch introduces files
+                // the tree doesn't know about at start up).
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 let added = diff_w_main().unwrap();
@@ -243,12 +254,8 @@ impl Handler for NeovimHandler {
         match name.as_str() {
             "stop" => {
                 if repo_is_modified().unwrap() {
-                    push_to_git_remote().await.unwrap();
-                    info!("local pushed to remote");
+                    push_all_to_git_remote_cmd().await;
                 }
-                let mut interval = time::interval(time::Duration::from_secs(3));
-                interval.tick().await;
-                debug!("woke up, closing");
                 Ok(Value::Nil)
             }
             "nodes" => Ok(telescope_nodes(&*self.tree.lock().unwrap())),
@@ -261,7 +268,7 @@ impl Handler for NeovimHandler {
             "link" => {
                 // let args: Vec<&str> = _args.iter().map(|arg| arg.as_str().unwrap()).collect();
                 // debug!("{:?}", _args);
-                
+
                 let text = _args[0].as_str().unwrap();
                 let from = _args[1].as_str().unwrap();
                 let from_ln = _args[2].as_u64().unwrap();
@@ -270,7 +277,10 @@ impl Handler for NeovimHandler {
                 let to_ln = _args[5].as_u64().unwrap();
                 let to_col = _args[6].as_u64().unwrap();
                 debug!("{text} {from} {from_ln} {from_col} {to} {to_ln} {to_col}");
-                self.tree.lock().unwrap().link(text, from, from_ln, from_col, to, to_ln, to_col);
+                self.tree
+                    .lock()
+                    .unwrap()
+                    .link(text, from, from_ln, from_col, to, to_ln, to_col);
                 Ok(Value::Nil)
             }
             "follow-link" => {
@@ -279,17 +289,20 @@ impl Handler for NeovimHandler {
                 let node = _args[0].as_str().unwrap();
                 let link_id = _args[1].as_str().unwrap();
                 debug!("{node} {link_id}");
-                let names: Vec<String> = self.tree.lock().unwrap().nodes.keys().map(|k| k.clone()).collect();
+                let names: Vec<String> = self
+                    .tree
+                    .lock()
+                    .unwrap()
+                    .nodes
+                    .keys()
+                    .map(|k| k.clone())
+                    .collect();
                 debug!("{names:?}");
                 let (link, line) = self.tree.lock().unwrap().get_link(node, link_id);
-                Ok(
-                    Value::from(
-                        vec![
-                            (Value::from("node"), Value::from(link)),
-                            (Value::from("line"), Value::from(line)),
-                        ]
-                    )
-                )
+                Ok(Value::from(vec![
+                    (Value::from("node"), Value::from(link)),
+                    (Value::from("line"), Value::from(line)),
+                ]))
             }
             "children" => {
                 debug!("{:?}", _args);

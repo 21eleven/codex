@@ -1,17 +1,15 @@
-use crate::git::{commit_paths, stage_all};
-use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeLink, NodeMeta};
+use crate::git::stage_all;
+use crate::node::{power_of_ten, prepare_path_name, Node, NodeKey, NodeLink};
 use chrono::Local;
 use git2::Repository;
 use log::*;
-use nom::bytes::complete::{tag, take_till};
-use nom::IResult;
 use nvim_rs::Value;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::error;
 use std::fmt;
 use std::fs::rename;
 use std::path::{Path, PathBuf};
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 
 pub type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 

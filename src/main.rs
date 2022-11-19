@@ -1,3 +1,4 @@
+#![feature(exit_status_error)]
 use git2::Repository;
 use log::*;
 use nvim_rs::create::tokio as create;

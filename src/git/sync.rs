@@ -1,14 +1,33 @@
-use crate::git::{checkout_branch, commit_all, commit_any, repo};
-use chrono::Local;
+use crate::git::{checkout_branch, commit_all, repo};
 use git2::build::RepoBuilder;
 use git2::{Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository};
 use log::*;
-use std::env;
+use regex::Regex;
 use std::path::Path;
+use std::process::Command;
+use std::{env, fs};
+
+pub async fn push_all_to_git_remote_cmd() {
+    commit_all(None).unwrap();
+    let push_all = Command::new("git")
+        .arg("push")
+        .arg("--all")
+        .output()
+        .expect("push all command fail");
+    debug!("GIT PUSH: {}", String::from_utf8(push_all.stdout).unwrap());
+    debug!(
+        "GIT PUSH STDERR: {}",
+        String::from_utf8(push_all.stderr).unwrap()
+    );
+    push_all
+        .status
+        .exit_ok()
+        .expect("push all non zero exit code");
+}
 
 pub async fn push_to_git_remote() -> Result<(), git2::Error> {
     // commit_any(None)?; -- not currently working
-    commit_all(None);
+    commit_all(None).unwrap();
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
@@ -55,10 +74,20 @@ fn callback() -> RemoteCallbacks<'static> {
             "CB\nurl: {:?}\nusername: {:?}\nallowed types: {:?}",
             _url, &username, &_allowed_types
         );
-        Cred::ssh_key(
+        // Cred::ssh_key(
+        //     username.unwrap(),
+        //     None,
+        //     std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
+        //     None,
+        // )
+        Cred::ssh_key_from_memory(
             username.unwrap(),
             None,
-            std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
+            &fs::read_to_string(std::path::Path::new(&format!(
+                "{}/.ssh/id_ghub",
+                env::var("HOME").unwrap()
+            )))
+            .unwrap(),
             None,
         )
     });
@@ -90,10 +119,13 @@ pub fn git_clone(url: &str) -> Result<(), git2::Error> {
 }
 
 pub fn fetch_and_pull() -> Result<(), git2::Error> {
-    let repo = repo()?;
-    let mut remote = repo.find_remote("origin")?;
+    let repo = repo().unwrap();
+    let mut remote = repo.find_remote("origin").unwrap();
     // let today_branch_name = Local::now().format("%Y%m%d").to_string();
     // TODO need to get default branch from git2::Config::open_global()
+    // let gox_repo = Repository::open("./").expect("unable to open repo | gitoxide");
+    // gox_repo.fe
+
     let main_commit = do_fetch(
         &repo,
         &[
@@ -101,16 +133,17 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
             "+refs/tags/latest:refs/tags/latest",
         ],
         &mut remote,
-    )?;
-    let mut remote = repo.find_remote("origin")?;
+    )
+    .unwrap();
+    let mut remote = repo.find_remote("origin").unwrap();
     // let mut opts = git2::FetchOptions::new();
     // opts.remote_callbacks(callback());
     // opts.download_tags(git2::AutotagOption::All);
-    // remote.download(&["latest"], Some(&mut opts))?;
-    let latest_oid = repo.refname_to_id("refs/tags/latest")?;
-    let latest = repo.find_tag(latest_oid)?;
+    // remote.download(&["latest"], Some(&mut opts)).unwrap();
+    let latest_oid = repo.refname_to_id("refs/tags/latest").unwrap();
+    let latest = repo.find_tag(latest_oid).unwrap();
     let most_recent_active_branch = latest.message().unwrap();
-    // let today_branch_commit = do_fetch(&repo, &[most_recent_active_branch], &mut remote)?;
+    // let today_branch_commit = do_fetch(&repo, &[most_recent_active_branch], &mut remote).unwrap();
     let today_branch_commit = do_fetch(
         &repo,
         &[&format!(
@@ -119,12 +152,13 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
             &most_recent_active_branch.trim()
         )],
         &mut remote,
-    )?;
+    )
+    .unwrap();
     // probably need to wrtie the tree o ftshi commit to the repo
     // let commit_id = &today_branch_commit.id();
 
-    do_merge(&repo, "main", main_commit)?;
-    do_merge(&repo, most_recent_active_branch, today_branch_commit)?;
+    do_merge(&repo, "main", main_commit).unwrap();
+    do_merge(&repo, most_recent_active_branch, today_branch_commit).unwrap();
     // checkout_branch(&repo, most_recent_active_branch)?;
     // let tree = repo.head()?.peel_to_tree()?;
     let c = &repo.head()?.peel(git2::ObjectType::Commit)?;
@@ -133,6 +167,88 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     // repo.checkout_tree(&tree, None)?;
     repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
     Ok(())
+}
+
+pub fn cmdline_fetch_and_pull() {
+    let fetch = Command::new("git")
+        .arg("fetch")
+        .arg("--all")
+        .output()
+        .expect("fetch failed");
+    debug!("GIT FETCH: {}", String::from_utf8(fetch.stdout).unwrap());
+    debug!(
+        "GIT FETCH STDERR: {}",
+        String::from_utf8(fetch.stderr).unwrap()
+    );
+    fetch.status.exit_ok().expect("fetch non zero exit code");
+    let chkout_main = Command::new("git")
+        .arg("checkout")
+        .arg("main")
+        .output()
+        .expect("checkout main command failed");
+    debug!(
+        "GIT CHKOUT_MAIN: {}",
+        String::from_utf8(chkout_main.stdout).unwrap()
+    );
+    debug!(
+        "GIT CHKOUT_MAIN STDERR: {}",
+        String::from_utf8(chkout_main.stderr).unwrap()
+    );
+    chkout_main
+        .status
+        .exit_ok()
+        .expect("check out of main failed");
+    let pull_main = Command::new("git")
+        .arg("pull")
+        .arg("origin")
+        .arg("main")
+        .arg("--ff")
+        .output()
+        .expect("pull main command failed");
+    pull_main.status.exit_ok().expect("pull of main failed");
+    let ls_branches = Command::new("git")
+        .arg("branch")
+        .arg("-a")
+        .output()
+        .expect("branch -a command failed");
+    ls_branches.status.exit_ok().expect("branch ls failed");
+    let remote_yyyymmdd_branch_patter = Regex::new(r"^\s*remotes/origin/(\d{8})").unwrap();
+    let latest = String::from_utf8(ls_branches.stdout)
+        .unwrap()
+        .lines()
+        .rev()
+        .find_map(|ln| {
+            remote_yyyymmdd_branch_patter
+                .captures(ln)
+                .map(|cap| cap[1].to_string())
+        })
+        .expect("no remote branches matching yyyymmdd regex");
+    debug!("LATEST BRANCH: {}", latest);
+    let chkout_latest = Command::new("git")
+        .arg("checkout")
+        .arg(latest.clone())
+        .output()
+        .expect("checkout latest command failed");
+    debug!(
+        "GIT CHKOUT_LATEST: {}",
+        String::from_utf8(chkout_latest.stdout).unwrap()
+    );
+    debug!(
+        "GIT CHKOUT_LATEST STDERR: {}",
+        String::from_utf8(chkout_latest.stderr).unwrap()
+    );
+    chkout_latest
+        .status
+        .exit_ok()
+        .expect("check out of latest failed");
+    let pull_latest = Command::new("git")
+        .arg("pull")
+        .arg("origin")
+        .arg(latest)
+        .arg("--ff")
+        .output()
+        .expect("pull latest command failed");
+    pull_latest.status.exit_ok().expect("pull of latest failed");
 }
 
 fn do_fetch<'a>(
@@ -144,7 +260,7 @@ fn do_fetch<'a>(
     opts.remote_callbacks(callback());
     opts.download_tags(git2::AutotagOption::All);
     debug!("Fetching {:?} for repo", refs);
-    remote.fetch(refs, Some(&mut opts), None)?;
+    remote.fetch(refs, Some(&mut opts), None).unwrap();
 
     // If there are local objects (we got a thin pack), then tell the user
     // how many objects we saved from having to cross the network.

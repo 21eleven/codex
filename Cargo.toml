@@ -16,14 +16,15 @@ log = "0.4"
 log-panics = { version = "2.0", features = ["with-backtrace"] }
 log4rs = { version = "1.0", features = ["toml_format"]}
 chrono = { version = "0.4", features = ["serde"]}
-# git2 = "0.13"
-git2 = {version="0.13.22", features = ["vendored-libgit2"]}
+git2 = {version="0.13.*", features = ["vendored-libgit2"]}
 serde = "1.0.*"
 serde_derive = "1.0.*"
 toml = "0.5.*"
 walkdir = "2"
 nom = "7.0.*"
 lcs-diff = "0.1.1"
+gitoxide-core = { version = "0.19.0", features = ["blocking-client"] }
+regex = "1.7.0"
 
 
 [dev-dependencies]
