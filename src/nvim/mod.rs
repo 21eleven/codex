@@ -13,8 +13,8 @@ use crate::git::diff::{
     repo_is_modified,
 };
 use crate::git::{
-    commit_all, fetch_and_pull, get_last_commit_of_branch, handle_git_branching,
-    push_to_git_remote, repo, stage_all,
+    commit_all, get_last_commit_of_branch, handle_git_branching, push_to_git_remote, repo,
+    stage_all,
 };
 use crate::node::power_of_ten;
 use rmpv::Value;
@@ -248,7 +248,7 @@ impl Handler for NeovimHandler {
         &self,
         name: String,
         _args: Vec<Value>,
-        neovim: Neovim<Compat<Stdout>>,
+        _neovim: Neovim<Compat<Stdout>>,
     ) -> Result<Value, Value> {
         debug!("in request handler");
         match name.as_str() {

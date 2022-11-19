@@ -302,7 +302,7 @@ impl Tree {
                         // this newly created node is a power of 10 node
                         // we must go to all the siblings and rename them
                         // TODO make this section more DRY
-                        let repo = Repository::open(self.dir.to_str().unwrap()).unwrap();
+                        let _repo = Repository::open(self.dir.to_str().unwrap()).unwrap();
                         let siblings = self.nodes.get_mut(&parent_ref).unwrap().children.clone();
                         for idx in 0..siblings.len() {
                             if &siblings[idx] == &child_id {

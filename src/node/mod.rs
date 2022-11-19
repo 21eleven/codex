@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 mod date_serde;
 use date_serde::codex_date_format;
 mod utils;
-use crate::git::commit_paths;
+
 use git2::Repository;
-use serde_derive;
+
 use std::fmt;
 pub use utils::*;
 
@@ -159,7 +159,7 @@ impl Node {
             Some((_, node)) => node,
             None => self.id.as_str(),
         };
-        let (num, name) = path.split_once('-').unwrap();
+        let (num, _name) = path.split_once('-').unwrap();
         num.parse::<usize>().unwrap()
     }
     pub fn create_child(&mut self, name: String, path: &str) -> Node {
@@ -185,7 +185,7 @@ impl Node {
         let link = self.links.get(link_id).unwrap();
         (link.node.clone(), link.line)
     }
-    pub fn rerank(&mut self, rank: u64) {
+    pub fn rerank(&mut self, _rank: u64) {
         todo!();
     }
     pub fn mv(&mut self, new_path: NodeKey) {

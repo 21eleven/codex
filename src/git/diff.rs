@@ -52,7 +52,7 @@ impl DiffWords {
         let mut added = 0;
         for (left, right) in self.words.values() {
             for result in lcs_diff::diff(left, right) {
-                if let lcs_diff::DiffResult::Added(w) = result {
+                if let lcs_diff::DiffResult::Added(_w) = result {
                     added += 1;
                 }
             }
