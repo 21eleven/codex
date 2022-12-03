@@ -484,6 +484,12 @@ map('n', '<leader>l', ":lua Codex.follow_link() <CR>", opt)
 map('n', 'zl', ":lua Codex.follow_link() <CR>", opt)
 map('n', 'zb', ":lua Codex.back() <CR>", opt)
 map('n', '<leader><leader>l', ":lua Codex.back() <CR>", opt)
+-- vim.keymap.set('n', 'za', M.article_note)
+-- vim.keymap.set('n', 'zi', M.idea_note)
+vim.keymap.set('n', 'za', ":lua Codex.article_note() <CR>")
+vim.keymap.set('n', 'zi', ":lua Codex.idea_note() <CR>")
+vim.keymap.set('n', '<leader>a', ":lua Codex.article_note() <CR>")
+vim.keymap.set('n', '<leader>i', ":lua Codex.idea_note() <CR>")
 
 function M.plugin_dir()
     return plugin_dir
@@ -535,6 +541,22 @@ function M.children()
         }),
     })
     return picker:find()
+end
+
+function M.article_note()
+    vim.ui.input({ prompt = "ARTICLE Note:" },
+        function(name)
+            M["create"]("5-notes/1-articles", name)
+        end
+    )
+end
+
+function M.idea_note()
+    vim.ui.input({ prompt = "IDEA Note:" },
+        function(name)
+            M["create"]("5-notes/2-ideas", name)
+        end
+    )
 end
 
 setmetatable(M, {

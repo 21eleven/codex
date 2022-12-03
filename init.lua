@@ -2,6 +2,7 @@ vim.opt.runtimepath = "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/
 
 local execute = vim.api.nvim_command
 local fn = vim.fn
+local home_dir = vim.loop.os_homedir()
 
 -- local install_path = home_dir..'/.local/share/codex/nvim/site/pack/packer/start/packer.nvim'
 local install_path = fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -31,7 +32,11 @@ end
 
 Codex = require("codex")
 
-require('packer').startup(function(use)
+packer = require('packer')
+packer.init({ snapshot_path = home_dir .. "/.cache/codex/packer.nvim",
+	compile_path = fn.stdpath('data') .. "/packer_compiled.lua" })
+packer.reset()
+packer_startup = function(use)
 	use 'wbthomason/packer.nvim'
 	use {
 		'nvim-telescope/telescope.nvim',
@@ -40,7 +45,9 @@ require('packer').startup(function(use)
 	use 'MunifTanjim/nui.nvim'
 	use 'nvim-lualine/lualine.nvim'
 	Codex.config.packages(use)
-end)
+end
+packer_startup(packer.use)
+
 vim.api.nvim_create_autocmd('BufWritePost', { command = 'lua Codex.update_word_count()' })
 require('lualine').setup { sections = { lualine_c = { "g:word_count", "filename" } } }
 require('telescope').load_extension('codex')
