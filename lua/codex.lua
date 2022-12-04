@@ -488,8 +488,8 @@ map('n', '<leader><leader>l', ":lua Codex.back() <CR>", opt)
 -- vim.keymap.set('n', 'zi', M.idea_note)
 vim.keymap.set('n', 'za', ":lua Codex.article_note() <CR>")
 vim.keymap.set('n', 'zi', ":lua Codex.idea_note() <CR>")
-vim.keymap.set('n', '<leader>a', ":lua Codex.article_note() <CR>")
-vim.keymap.set('n', '<leader>i', ":lua Codex.idea_note() <CR>")
+vim.keymap.set('n', '<leader><leader>a', ":lua Codex.article_note() <CR>")
+vim.keymap.set('n', '<leader><leader>i', ":lua Codex.idea_note() <CR>")
 
 function M.plugin_dir()
     return plugin_dir
