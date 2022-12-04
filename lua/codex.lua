@@ -546,7 +546,9 @@ end
 function M.article_note()
     vim.ui.input({ prompt = "ARTICLE Note:" },
         function(name)
-            M["create"]("5-notes/1-articles", name)
+            if name ~= nil and name ~= "" then
+                M["create"]("5-notes/1-articles", name)
+            end
         end
     )
 end
@@ -554,7 +556,9 @@ end
 function M.idea_note()
     vim.ui.input({ prompt = "IDEA Note:" },
         function(name)
-            M["create"]("5-notes/2-ideas", name)
+            if name ~= nil and name ~= "" then
+                M["create"]("5-notes/2-ideas", name)
+            end
         end
     )
 end
