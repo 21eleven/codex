@@ -97,9 +97,7 @@ impl Handler for NeovimHandler {
                 // fetch_and_pull().unwrap();
                 cmdline_fetch_and_pull();
                 handle_git_branching().unwrap();
-                // the tree is build prior to managing branches... so if you switch away from
-                // today's branch you may see some weird behavior (branch switch introduces files
-                // the tree doesn't know about at start up).
+                self.tree.lock().unwrap().load();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
                 let added = diff_w_main().unwrap();

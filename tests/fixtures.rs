@@ -19,7 +19,8 @@ pub fn initialdir(tempdir: TempDir) -> TempDir {
 
 #[fixture]
 pub fn dir_and_tree(initialdir: TempDir) -> (TempDir, Tree) {
-    let tree = Tree::build(initialdir.path().to_str().unwrap()).unwrap();
+    let mut tree = Tree::build(initialdir.path().to_str().unwrap()).unwrap();
+    tree.load();
     (initialdir, tree)
 }
 

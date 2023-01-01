@@ -139,7 +139,7 @@ fn get_node_key_number(node_key: &NodeKey) -> u64 {
 }
 
 impl Tree {
-    pub fn build(root: &str) -> Result<Tree> {
+    pub fn load(self: &mut Tree) {
         fn dfs(
             name: Option<NodeKey>,
             node_map: &mut BTreeMap<NodeKey, Node>,
@@ -215,20 +215,26 @@ impl Tree {
         let mut node_map: BTreeMap<NodeKey, Node> = BTreeMap::new();
         let mut journal: Option<NodeKey> = None;
         let mut desk: Option<NodeKey> = None;
-        dbg!(root);
-        assert_ne!(root.chars().last().unwrap(), '/');
         dfs(
             None,
             &mut node_map,
             None,
             &mut journal,
             &mut desk,
-            Path::new(&root),
+            &self.dir,
         );
+        self.nodes = node_map;
+        self.journal = journal.unwrap();
+        self.desk = desk.unwrap();
+    }
+    pub fn build(root: &str) -> Result<Tree> {
+        let mut node_map: BTreeMap<NodeKey, Node> = BTreeMap::new();
+        dbg!(root);
+        assert_ne!(root.chars().last().unwrap(), '/');
         Ok(Tree {
             nodes: node_map,
-            journal: journal.unwrap(),
-            desk: desk.unwrap(),
+            journal: NodeKey::new(),
+            desk: NodeKey::new(),
             dir: PathBuf::from(root),
         })
     }
