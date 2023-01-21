@@ -22,6 +22,12 @@ g = vim.g
 
 vim.o.autowriteall = true;
 vim.o.clipboard = "unnamedplus"
+vim.opt.swapfile = false
+vim.opt.backup = false
+vim.opt.undodir = fn.stdpath('data') .. "/codex_undodir"
+vim.opt.undofile = true
+
+vim.opt.isfname:append("@-@")
 
 
 function map(mode, lhs, rhs, opts)
