@@ -4,10 +4,11 @@ use chrono::Local;
 use git2::Repository;
 use log::*;
 use nvim_rs::Value;
+use regex::Regex;
 use std::collections::BTreeMap;
 use std::error;
 use std::fmt;
-use std::fs::rename;
+use std::fs::{read_to_string, rename, write};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -259,8 +260,13 @@ impl Tree {
             newest_child
         } else {
             debug!("creating new day node for {}", &today);
-            self.create_node(Some(&journal), Some(&today.to_string()))
-                .unwrap()
+            let today = self
+                .create_node(Some(&journal), Some(&today.to_string()))
+                .unwrap();
+            let node = self.nodes.get(&journal).unwrap();
+            let yesterday = newest_child;
+            rollover_todos_from_yesterday(&yesterday, &today);
+            today
         }
     }
     /// Validates data from RPC call
@@ -479,4 +485,20 @@ impl Tree {
         // the children vec is zero indexed
         parent.children[sibling_index - 1].clone()
     }
+}
+
+fn rollover_todos_from_yesterday(yesterday: &NodeKey, today: &NodeKey) {
+    let yesterday_body = read_to_string(Path::new(yesterday).join("_.md")).unwrap();
+    let today_file = Path::new(today).join("_.md");
+    let today_body = read_to_string(&today_file).unwrap();
+    write(today_file, move_todos(yesterday_body, today_body)).unwrap();
+}
+fn move_todos(prior: String, current: String) -> String {
+    let todos: String = Regex::new(r"(?m)^( |\t)*- \[\] .*")
+        .unwrap()
+        .find_iter(&prior)
+        .map(|x| x.as_str().to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
+    format!("{}\n{}\n", current, todos)
 }
