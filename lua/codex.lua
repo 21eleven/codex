@@ -88,12 +88,16 @@ function M.entry_maker(node)
         -- value = node .. '/meta.toml',
         value = node.id .. '/_.md',
         display = node.display,
-        ordinal = node.id,
+        -- ordinal is what is fed to the fuzzy searcher
+        -- is it not the initial ordering of the collection
+        ordinal = node.display,
     }
 end
 
 function M.nodes()
     local nodes = M.get_nodes()
+
+    -- local nodes = table.sort( M.get_nodes(), function(a, b) return a.updated < b.updated end)
     local finder_fn = Finder.new_table({
         results = nodes,
         entry_maker = M.entry_maker
@@ -498,6 +502,11 @@ end
 function M.current_node()
     local node = string.gsub(vim.fn.expand("%"), "/_.md", "")
     return node
+end
+
+function M.tick_updated()
+    local curr_node = M.current_node()
+    vim.rpcnotify(_t.job_id, "tick-updated", curr_node)
 end
 
 function M.parent()

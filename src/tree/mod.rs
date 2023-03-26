@@ -485,6 +485,11 @@ impl Tree {
         // the children vec is zero indexed
         parent.children[sibling_index - 1].clone()
     }
+    pub fn nodes_by_recency(&self) -> Vec<&Node> {
+        let mut nodes = self.nodes.values().collect::<Vec<&Node>>();
+        nodes.sort_unstable_by(|a, b| b.updated.cmp(&a.updated));
+        nodes
+    }
 }
 
 fn rollover_todos_from_yesterday(yesterday: &NodeKey, today: &NodeKey) {

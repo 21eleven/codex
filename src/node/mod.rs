@@ -165,7 +165,7 @@ impl Node {
     pub fn create_child(&mut self, name: String, path: &str) -> Node {
         let child = Node::create(name, Some(self), path);
         self.children.push(child.id.clone());
-        self.tick_update_and_write_meta();
+        self.write_meta();
         child
     }
     fn tag(&mut self, new_tag: String) {
@@ -245,6 +245,10 @@ impl Telescoped for Node {
             (
                 Value::String("display".into()),
                 Value::String(self.display_name.clone().into()),
+            ),
+            (
+                Value::String("updated".into()),
+                Value::String(self.updated.clone().to_rfc3339().into()),
             ),
         ])
     }

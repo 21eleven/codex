@@ -29,8 +29,8 @@ pub trait Telescoped {
 
 fn telescope_nodes(tree: &tree::Tree) -> Value {
     Value::Array(
-        tree.nodes
-            .values()
+        tree.nodes_by_recency()
+            .into_iter()
             // impl DeRef to Value?
             .map(|n| n.entry())
             .collect(),
@@ -120,6 +120,27 @@ impl Handler for NeovimHandler {
                     .command(&format!("lua print('words: {}')", added))
                     .await
                     .unwrap();
+            }
+            "tick-updated" => {
+                // direct casting from Value to String will result in double quote chars within the
+                // String, ie '"1-nodes/1-jazznode"' (bad) vs '1-nodes/1-jazznode' (good)
+                let curr_node = _args[0].as_str().unwrap().to_string();
+                match self.tree.lock().unwrap().nodes.get_mut(&curr_node) {
+                    Some(node) => node.tick_update_and_write_meta(),
+                    None => {
+                        error!(
+                            "during tick-updated Node id: {} was not found in node tree 😨",
+                            curr_node
+                        );
+                        tokio::spawn(async move {
+                            neovim
+                            .command(&format!(
+                                "lua vim.notify('during tick-updated Node id: {} was not found in node tree 😨\n\n', vim.log.levels.WARN)",
+                                curr_node
+                            )).await.unwrap();
+                        });
+                    }
+                }
             }
             "word-count" => {
                 let added = diff_w_main().unwrap();
@@ -242,6 +263,7 @@ impl Handler for NeovimHandler {
             _ => {}
         }
     }
+    // sync ops
     async fn handle_request(
         &self,
         name: String,
