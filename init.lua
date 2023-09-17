@@ -1,4 +1,5 @@
-vim.opt.runtimepath = "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after,~/gits/codex,~/.config/codex"
+--vim.opt.runtimepath = "~/.local/share/codex,/etc/xdg/nvim,/usr/local/share/nvim/site,/usr/share/nvim/site,/usr/share/nvim/runtime,/lib/nvim,/usr/share/nvim/site/after,/usr/local/share/nvim/site/after,~/gits/codex,~/.config/codex"
+vim.opt.runtimepath = "~/.local/share/codex,$VIMRUNTIME,~/gits/codex,~/.config/codex"
 
 local execute = vim.api.nvim_command
 local fn = vim.fn
@@ -37,7 +38,6 @@ function map(mode, lhs, rhs, opts)
 end
 
 Codex = require("codex")
-
 packer = require('packer')
 packer.init({ snapshot_path = home_dir .. "/.cache/codex/packer.nvim",
 	compile_path = fn.stdpath('data') .. "/packer_compiled.lua" })
@@ -50,7 +50,7 @@ packer_startup = function(use)
 	}
 	use 'MunifTanjim/nui.nvim'
 	use 'nvim-lualine/lualine.nvim'
-	Codex.config.packages(use)
+    Codex.config.packages(use)
 end
 packer_startup(packer.use)
 

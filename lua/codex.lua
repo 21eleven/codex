@@ -110,7 +110,7 @@ function M.nodes()
         previewer = require('telescope.previewers').new_termopen_previewer({
             get_command = function(entry)
                 -- what if bat is not in that directory...?
-                return { '/usr/bin/bat', '--style=plain', entry.value }
+                return { 'bat', '--style=plain', entry.value }
             end,
         }),
     })
@@ -132,7 +132,7 @@ function M.new_node()
         -- previewer = Previewer.vim_buffer_cat.new(),
         previewer = require('telescope.previewers').new_termopen_previewer({
             get_command = function(entry)
-                return { '/usr/bin/bat', '--style=plain', entry.value }
+                return { 'bat', '--style=plain', entry.value }
             end,
         }),
         attach_mappings = function(prompt_bufnr, map)
@@ -366,7 +366,7 @@ function M.link_from_visual()
         -- previewer = Previewer.vim_buffer_cat.new(),
         previewer = require('telescope.previewers').new_termopen_previewer({
             get_command = function(entry)
-                return { '/usr/bin/bat', '--style=plain', entry.value }
+                return { 'bat', '--style=plain', entry.value }
             end,
         }),
         attach_mappings = function(prompt_bufnr, map)
@@ -385,7 +385,7 @@ function M.link_from_visual()
                     -- previewer = Previewer.vim_buffer_cat.new(),
                     previewer = require('telescope.previewers').new_termopen_previewer({
                         get_command = function(entry)
-                            return { '/usr/bin/bat', '--style=plain', '--line-range', ':' .. entry.ordinal, target.value }
+                            return { 'bat', '--style=plain', '--line-range', ':' .. entry.ordinal, target.value }
                         end,
                     }),
                     attach_mappings = function(prompt_bufnr, map)
@@ -426,7 +426,7 @@ function M.name_link()
         -- previewer = Previewer.vim_buffer_cat.new(),
         previewer = require('telescope.previewers').new_termopen_previewer({
             get_command = function(entry)
-                return { '/usr/bin/bat', '--style=plain', entry.value }
+                return { 'bat', '--style=plain', entry.value }
             end,
         }),
         attach_mappings = function(prompt_bufnr, map)
@@ -545,7 +545,7 @@ function M.children()
         -- previewer = Previewer.vim_buffer_cat.new(),
         previewer = require('telescope.previewers').new_termopen_previewer({
             get_command = function(entry)
-                return { '/usr/bin/bat', '--style=plain', entry.value }
+                return { 'bat', '--style=plain', entry.value }
             end,
         }),
     })
