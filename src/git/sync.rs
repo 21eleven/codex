@@ -4,7 +4,7 @@ use git2::{Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository};
 use log::*;
 use regex::Regex;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, ExitStatusError};
 use std::{env, fs};
 
 pub async fn push_all_to_git_remote_cmd() {
@@ -31,42 +31,18 @@ pub async fn push_to_git_remote() -> Result<(), git2::Error> {
     let mut push_opts = PushOptions::default();
     push_opts.remote_callbacks(callback());
     let repo = repo()?;
-    let current_branch = repo
-        .head()?
-        .name()
-        .unwrap_or("/")
-        .rsplit_once("/")
-        .unwrap()
-        .1
-        .to_string();
-    let latest_commit = repo
-        .revparse_single(&current_branch)
-        .unwrap()
-        .peel_to_commit()
-        .unwrap();
-    repo.tag(
-        "latest",
-        latest_commit.as_object(),
-        &repo.signature()?,
-        &current_branch,
-        true,
-    )?;
     let mut remote = repo.find_remote("origin")?;
     // TODO need to get default branch from git2::Config::open_global()
     remote.push(
         &[
-            format!(
-                "refs/heads/{}:refs/heads/{}",
-                current_branch, current_branch
-            ),
             "refs/heads/main:refs/heads/main".to_owned(),
-            "+refs/tags/latest:refs/tags/latest".to_owned(),
         ],
         Some(&mut push_opts),
     )?;
-    debug!("branch pushed");
+    debug!("main branch pushed");
     Ok(())
 }
+
 fn callback() -> RemoteCallbacks<'static> {
     let mut cb = RemoteCallbacks::new();
     cb.credentials(|_url, username, _allowed_types| {
@@ -91,7 +67,6 @@ fn callback() -> RemoteCallbacks<'static> {
             None,
         )
     });
-
     cb
 }
 
@@ -167,6 +142,17 @@ pub fn fetch_and_pull() -> Result<(), git2::Error> {
     // repo.checkout_tree(&tree, None)?;
     repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
     Ok(())
+}
+
+pub fn pull_origin_main() -> std::result::Result<(), ExitStatusError> {
+    let pull_main = Command::new("git")
+        .arg("pull")
+        .arg("origin")
+        .arg("main")
+        .arg("--ff")
+        .output()
+        .expect("pull main command failed");
+    pull_main.status.exit_ok()
 }
 
 pub fn cmdline_fetch_and_pull() {

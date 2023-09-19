@@ -4,7 +4,7 @@ use nvim_rs::{compat::tokio::Compat, Handler, Neovim};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::git::sync::{cmdline_fetch_and_pull, push_all_to_git_remote_cmd};
+use crate::git::sync::{cmdline_fetch_and_pull, pull_origin_main, push_all_to_git_remote_cmd};
 use crate::tree;
 use crate::tree::next_sibling_id;
 //use tokio::sync::Mutex; // use std::sync::Mutex instead???
@@ -58,6 +58,7 @@ fn node_parent(id: &str, tree: &tree::Tree) -> Option<String> {
 pub struct NeovimHandler {
     pub tree: Arc<Mutex<tree::Tree>>,
 }
+
 async fn on_start(nvim: Neovim<Compat<Stdout>>) {
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_millis(250));
@@ -71,6 +72,17 @@ async fn on_start(nvim: Neovim<Compat<Stdout>>) {
             nvim.command(&s).await.unwrap();
         }
     });
+}
+
+async fn pull_main_branch(nvim: Neovim<Compat<Stdout>>) {
+    match pull_origin_main() {
+        Err(msg) => {
+            let print_error_cmd =
+                format!("lua error(\"failed to pull and merge in main branch: {msg}\")");
+            nvim.command(&print_error_cmd).await.unwrap();
+        }
+        Ok(_) => nvim.command("lua print(\"notes synced\")").await.unwrap(),
+    }
 }
 
 #[async_trait]
@@ -95,8 +107,8 @@ impl Handler for NeovimHandler {
                 );
                 on_start(neovim.clone()).await;
                 // fetch_and_pull().unwrap();
-                cmdline_fetch_and_pull();
-                handle_git_branching().unwrap();
+                // cmdline_fetch_and_pull();
+                // handle_git_branching().unwrap();
                 self.tree.lock().unwrap().load();
                 let today = self.tree.lock().unwrap().today_node();
                 neovim.command(&format!("e {}/_.md", today)).await.unwrap();
@@ -106,6 +118,7 @@ impl Handler for NeovimHandler {
                     .await
                     .unwrap();
                 stage_all().unwrap();
+                tokio::spawn(async move {pull_main_branch(neovim.clone()).await});
 
                 // let today = tree.today_node();
                 debug!("git remote url {:?}", std::env::var("CODEX_GIT_REMOTE"));
