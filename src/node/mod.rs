@@ -378,9 +378,9 @@ pub struct NodeMeta {
     pub tags: Vec<String>,
     pub links: Vec<String>,
     pub backlinks: Vec<String>,
-    #[serde(with = "codex_date_format")]
+    // #[serde(with = "codex_date_format")]
     pub created: DateTime<Local>,
-    #[serde(with = "codex_date_format")]
+    // #[serde(with = "codex_date_format")]
     pub updated: DateTime<Local>,
     pub updates: u64,
     pub internal: Vec<String>,
